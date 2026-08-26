@@ -1,18 +1,19 @@
-import React, { useState } from 'react';
-import { Sparkles, Calendar, DollarSign, Zap, Home, Wifi, Droplets, CreditCard, Smartphone, Check, ArrowRight, ShieldCheck, Globe } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Sparkles, Calendar, DollarSign, Zap, Home, Wifi, Droplets, CreditCard, Smartphone, Check, ArrowRight, ShieldCheck, Globe, X } from 'lucide-react';
 import * as api from '../../services/api';
 import { useBudgetStore } from '../../stores/useBudgetStore';
 import { useLanguageStore } from '../../stores/useLanguageStore';
 
-function formatOrdinalDue(day, lang) {
-  if (lang === 'tl') {
-    return `Due sa ika-${day}`;
-  }
-  const s = ['th', 'st', 'nd', 'rd'];
-  const v = day % 100;
-  const ord = day + (s[(v - 20) % 10] || s[v] || s[0]);
-  return `Due on the ${ord}`;
-}
+const DRAFT_KEY = 'budgetph_onboarding_draft_v1';
+
+const defaultBillsList = [
+  { id: 'electricity', labelKey: 'bill_electricity', defaultName: 'Electricity Bill', category: 'electricity', amount: 2500, due_day: 18, selected: true, icon: Zap },
+  { id: 'rent', labelKey: 'bill_rent', defaultName: 'House Rent', category: 'rent', amount: 5000, due_day: 1, selected: true, icon: Home },
+  { id: 'internet', labelKey: 'bill_internet', defaultName: 'Internet / Wifi', category: 'internet', amount: 1500, due_day: 25, selected: true, icon: Wifi },
+  { id: 'water', labelKey: 'bill_water', defaultName: 'Water Bill', category: 'water', amount: 500, due_day: 22, selected: true, icon: Droplets },
+  { id: 'loan', labelKey: 'bill_loan', defaultName: 'Loans & Cards', category: 'credit_card', amount: 1500, due_day: 5, selected: false, icon: CreditCard },
+  { id: 'phone', labelKey: 'bill_phone', defaultName: 'Phone & Load', category: 'subscriptions', amount: 500, due_day: 15, selected: false, icon: Smartphone },
+];
 
 export function FastTrackOnboardingModal({ isOpen, onClose }) {
   const { loadDashboard } = useBudgetStore();
@@ -20,10 +21,25 @@ export function FastTrackOnboardingModal({ isOpen, onClose }) {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Initialize from LocalStorage draft if available
+  const getInitialDraft = () => {
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.warn('Failed to parse onboarding draft:', e);
+    }
+    return null;
+  };
+
+  const initialDraft = getInitialDraft();
+
   // Screen 1: Profile & Income
-  const [name, setName] = useState('');
-  const [incomeAmount, setIncomeAmount] = useState('25000');
-  const [frequency, setFrequency] = useState('semi-monthly');
+  const [name, setName] = useState(initialDraft?.name || '');
+  const [incomeAmount, setIncomeAmount] = useState(initialDraft?.incomeAmount || '25000');
+  const [frequency, setFrequency] = useState(initialDraft?.frequency || 'semi-monthly');
   
   // Default next payday (calculate 15th or end of month)
   const today = new Date();
@@ -31,23 +47,42 @@ export function FastTrackOnboardingModal({ isOpen, onClose }) {
   if (today.getDate() < 15) {
     defaultNextPayday.setDate(15);
   } else {
-    // End of current month
     defaultNextPayday.setMonth(defaultNextPayday.getMonth() + 1, 0);
   }
-  const [nextPaydayDate, setNextPaydayDate] = useState(defaultNextPayday.toISOString().split('T')[0]);
+  const [nextPaydayDate, setNextPaydayDate] = useState(
+    initialDraft?.nextPaydayDate || defaultNextPayday.toISOString().split('T')[0]
+  );
 
-  // Screen 2: Universal Nationwide Bills Preset
-  const [bills, setBills] = useState([
-    { id: 'electricity', labelKey: 'bill_electricity', defaultName: 'Electricity Bill', category: 'electricity', amount: 2500, due_day: 18, selected: true, icon: Zap },
-    { id: 'rent', labelKey: 'bill_rent', defaultName: 'House Rent', category: 'rent', amount: 5000, due_day: 1, selected: true, icon: Home },
-    { id: 'internet', labelKey: 'bill_internet', defaultName: 'Internet / Wifi', category: 'internet', amount: 1500, due_day: 25, selected: true, icon: Wifi },
-    { id: 'water', labelKey: 'bill_water', defaultName: 'Water Bill', category: 'water', amount: 500, due_day: 22, selected: true, icon: Droplets },
-    { id: 'loan', labelKey: 'bill_loan', defaultName: 'Loans & Cards', category: 'credit_card', amount: 1500, due_day: 5, selected: false, icon: CreditCard },
-    { id: 'phone', labelKey: 'bill_phone', defaultName: 'Phone & Load', category: 'subscriptions', amount: 500, due_day: 15, selected: false, icon: Smartphone },
-  ]);
+  // Screen 2: Universal Nationwide Bills Preset with Editable Due Days
+  const [bills, setBills] = useState(() => {
+    if (initialDraft?.bills && Array.isArray(initialDraft.bills)) {
+      return defaultBillsList.map(def => {
+        const match = initialDraft.bills.find(b => b.id === def.id);
+        return match ? { ...def, ...match, icon: def.icon } : def;
+      });
+    }
+    return defaultBillsList;
+  });
 
-  const [includeEmergencyFund, setIncludeEmergencyFund] = useState(true);
-  const [emergencyAmount, setEmergencyAmount] = useState('1000');
+  const [includeEmergencyFund, setIncludeEmergencyFund] = useState(
+    initialDraft?.includeEmergencyFund ?? true
+  );
+  const [emergencyAmount, setEmergencyAmount] = useState(initialDraft?.emergencyAmount || '1000');
+
+  // Auto-save form draft whenever state changes
+  useEffect(() => {
+    const draftData = {
+      name,
+      incomeAmount,
+      frequency,
+      nextPaydayDate,
+      bills: bills.map(b => ({ id: b.id, amount: b.amount, due_day: b.due_day, selected: b.selected })),
+      includeEmergencyFund,
+      emergencyAmount,
+      step
+    };
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draftData));
+  }, [name, incomeAmount, frequency, nextPaydayDate, bills, includeEmergencyFund, emergencyAmount, step]);
 
   if (!isOpen) return null;
 
@@ -57,6 +92,11 @@ export function FastTrackOnboardingModal({ isOpen, onClose }) {
 
   const updateBillAmount = (id, newAmount) => {
     setBills(prev => prev.map(b => b.id === id ? { ...b, amount: parseFloat(newAmount) || 0 } : b));
+  };
+
+  const updateBillDueDay = (id, newDay) => {
+    const parsed = Math.min(31, Math.max(1, parseInt(newDay) || 1));
+    setBills(prev => prev.map(b => b.id === id ? { ...b, due_day: parsed } : b));
   };
 
   // Calculations
@@ -91,6 +131,10 @@ export function FastTrackOnboardingModal({ isOpen, onClose }) {
         })),
         emergency_fund_contribution: emergencyFund
       });
+
+      // Clear draft on successful completion
+      localStorage.removeItem(DRAFT_KEY);
+      localStorage.setItem('budgetph_onboarded', 'true');
 
       await loadDashboard();
       onClose();
@@ -252,51 +296,78 @@ export function FastTrackOnboardingModal({ isOpen, onClose }) {
             </button>
           </div>
         ) : (
-          /* ================= STEP 2: QUICK BILLS & COMMITMENTS ================= */
+          /* ================= STEP 2: QUICK BILLS & EDITABLE DUE DATES ================= */
           <form onSubmit={handleSubmit} className="space-y-4 animate-in slide-in-from-right-4 duration-200">
             <div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mb-2.5">
                 {t('step2_instructions')}
               </p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-56 overflow-y-auto p-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-60 overflow-y-auto p-1">
                 {bills.map((b) => {
                   const Icon = b.icon;
                   const billTitle = t(b.labelKey) || b.defaultName;
-                  const dueText = formatOrdinalDue(b.due_day, language);
 
                   return (
                     <div
                       key={b.id}
                       onClick={() => toggleBill(b.id)}
-                      className={`p-3 rounded-2xl border flex items-center justify-between gap-2.5 transition cursor-pointer ${
+                      className={`p-3 rounded-2xl border flex flex-col justify-between gap-2 transition cursor-pointer ${
                         b.selected
                           ? 'border-green-500 bg-green-50/70 dark:bg-green-950/40 text-green-900 dark:text-green-200 ring-1 ring-green-500/30'
-                          : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/30 text-slate-500 dark:text-slate-400 opacity-60'
+                          : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/30 text-slate-500 dark:text-slate-400 opacity-60 hover:opacity-80'
                       }`}
                     >
-                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                          b.selected ? 'bg-green-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
-                        }`}>
-                          <Icon className="w-4 h-4" />
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                            b.selected ? 'bg-green-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+                          }`}>
+                            <Icon className="w-4 h-4" />
+                          </div>
+                          <p className="font-bold text-xs leading-tight text-slate-900 dark:text-slate-100 truncate">{billTitle}</p>
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-bold text-xs leading-tight text-slate-900 dark:text-slate-100">{billTitle}</p>
-                          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{dueText}</p>
+                        
+                        {/* Toggle indicator checkbox */}
+                        <div className={`w-5 h-5 rounded-lg border flex items-center justify-center flex-shrink-0 transition ${
+                          b.selected ? 'bg-green-600 border-green-600 text-white' : 'border-slate-300 dark:border-slate-700'
+                        }`}>
+                          {b.selected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                         </div>
                       </div>
-                      
+
+                      {/* Interactive Due Day & Amount inputs when selected */}
                       {b.selected ? (
-                        <input
-                          type="number"
-                          value={b.amount}
-                          onClick={(e) => e.stopPropagation()}
-                          onChange={(e) => updateBillAmount(b.id, e.target.value)}
-                          className="w-18 px-2 py-1 bg-white dark:bg-slate-900 border border-green-300 dark:border-green-800 rounded-lg text-xs font-black text-right text-slate-900 dark:text-slate-50 focus:outline-none flex-shrink-0"
-                        />
+                        <div className="flex items-center justify-between gap-2 pt-1 border-t border-green-200/60 dark:border-green-900/60" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase">{t('due_day_label')}</span>
+                            <div className="flex items-center bg-white dark:bg-slate-900 border border-green-300 dark:border-green-800 rounded-lg px-1.5 py-0.5">
+                              <span className="text-[10px] text-slate-400 font-medium">Day</span>
+                              <input
+                                type="number"
+                                min="1"
+                                max="31"
+                                value={b.due_day}
+                                onChange={(e) => updateBillDueDay(b.id, e.target.value)}
+                                className="w-8 text-center text-xs font-black text-slate-900 dark:text-slate-50 bg-transparent focus:outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex items-center bg-white dark:bg-slate-900 border border-green-300 dark:border-green-800 rounded-lg px-2 py-0.5">
+                            <span className="text-xs text-slate-400 font-bold mr-1">₱</span>
+                            <input
+                              type="number"
+                              value={b.amount}
+                              onChange={(e) => updateBillAmount(b.id, e.target.value)}
+                              className="w-16 text-xs font-black text-right text-slate-900 dark:text-slate-50 bg-transparent focus:outline-none"
+                            />
+                          </div>
+                        </div>
                       ) : (
-                        <div className="w-5 h-5 rounded-full border border-slate-300 dark:border-slate-700 flex items-center justify-center flex-shrink-0"></div>
+                        <p className="text-[10px] text-slate-400 italic pt-0.5">
+                          {t('tap_to_add')}
+                        </p>
                       )}
                     </div>
                   );
