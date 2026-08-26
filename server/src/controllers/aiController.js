@@ -128,23 +128,31 @@ Always answer with clarity, warmth, and exact arithmetic based on these numbers.
         { role: 'user', content: message }
       ];
 
-      const groqRes = await axios.post(
-        'https://api.groq.com/openai/v1/chat/completions',
-        {
-          model: process.env.GROQ_MODEL || 'llama3-70b-8192',
-          messages,
-          temperature: 0.6
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json'
+      try {
+        const modelName = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+        const groqRes = await axios.post(
+          'https://api.groq.com/openai/v1/chat/completions',
+          {
+            model: modelName,
+            messages,
+            temperature: 0.6
           },
-          timeout: 15000
-        }
-      );
-      aiResponse = groqRes.data?.choices?.[0]?.message?.content || (lang === 'tl' ? 'Pasensya na, walang tugon mula sa AI.' : 'Sorry, no response from AI.');
-    } else {
+          {
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json'
+            },
+            timeout: 15000
+          }
+        );
+        aiResponse = groqRes.data?.choices?.[0]?.message?.content || (lang === 'tl' ? 'Pasensya na, walang tugon mula sa AI.' : 'Sorry, no response from AI.');
+      } catch (groqErr) {
+        console.error('Groq API call error:', groqErr.response?.data || groqErr.message);
+        // Fallback to local intelligent rules below if Groq throws
+      }
+    }
+
+    if (!aiResponse) {
       // Local rule-based advisor
       const msg = message.toLowerCase();
       const isTagalogInput = msg.includes('pwede') || msg.includes('bilhin') || msg.includes('bumili') || msg.includes('gastos') || msg.includes('magkano') || lang === 'tl';
