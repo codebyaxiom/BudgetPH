@@ -4,6 +4,16 @@ import * as api from '../../services/api';
 import { useBudgetStore } from '../../stores/useBudgetStore';
 import { useLanguageStore } from '../../stores/useLanguageStore';
 
+function formatOrdinalDue(day, lang) {
+  if (lang === 'tl') {
+    return `Due sa ika-${day}`;
+  }
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = day % 100;
+  const ord = day + (s[(v - 20) % 10] || s[v] || s[0]);
+  return `Due on the ${ord}`;
+}
+
 export function FastTrackOnboardingModal({ isOpen, onClose }) {
   const { loadDashboard } = useBudgetStore();
   const { language, setLanguage, t } = useLanguageStore();
@@ -26,14 +36,14 @@ export function FastTrackOnboardingModal({ isOpen, onClose }) {
   }
   const [nextPaydayDate, setNextPaydayDate] = useState(defaultNextPayday.toISOString().split('T')[0]);
 
-  // Screen 2: Quick Bills Preset
+  // Screen 2: Universal Nationwide Bills Preset
   const [bills, setBills] = useState([
-    { id: 'meralco', name: 'Meralco (Electricity)', category: 'electricity', amount: 2500, due_day: 18, selected: true, icon: Zap },
-    { id: 'rent', name: 'House Rent / Condo', category: 'rent', amount: 5000, due_day: 1, selected: true, icon: Home },
-    { id: 'wifi', name: 'PLDT / Converge Wifi', category: 'internet', amount: 1500, due_day: 25, selected: true, icon: Wifi },
-    { id: 'water', name: 'Maynilad / Water', category: 'water', amount: 500, due_day: 22, selected: true, icon: Droplets },
-    { id: 'card', name: 'Credit Card / SpayLater', category: 'credit_card', amount: 1500, due_day: 5, selected: false, icon: CreditCard },
-    { id: 'load', name: 'Phone Load / Postpaid', category: 'subscriptions', amount: 500, due_day: 15, selected: false, icon: Smartphone },
+    { id: 'electricity', labelKey: 'bill_electricity', defaultName: 'Electricity Bill', category: 'electricity', amount: 2500, due_day: 18, selected: true, icon: Zap },
+    { id: 'rent', labelKey: 'bill_rent', defaultName: 'House Rent', category: 'rent', amount: 5000, due_day: 1, selected: true, icon: Home },
+    { id: 'internet', labelKey: 'bill_internet', defaultName: 'Internet / Wifi', category: 'internet', amount: 1500, due_day: 25, selected: true, icon: Wifi },
+    { id: 'water', labelKey: 'bill_water', defaultName: 'Water Bill', category: 'water', amount: 500, due_day: 22, selected: true, icon: Droplets },
+    { id: 'loan', labelKey: 'bill_loan', defaultName: 'Loans & Cards', category: 'credit_card', amount: 1500, due_day: 5, selected: false, icon: CreditCard },
+    { id: 'phone', labelKey: 'bill_phone', defaultName: 'Phone & Load', category: 'subscriptions', amount: 500, due_day: 15, selected: false, icon: Smartphone },
   ]);
 
   const [includeEmergencyFund, setIncludeEmergencyFund] = useState(true);
@@ -74,7 +84,7 @@ export function FastTrackOnboardingModal({ isOpen, onClose }) {
         frequency,
         next_payday_date: nextPaydayDate,
         bills: selectedBills.map(b => ({
-          name: b.name,
+          name: t(b.labelKey) || b.defaultName,
           category: b.category,
           amount: b.amount,
           due_day: b.due_day
@@ -167,10 +177,10 @@ export function FastTrackOnboardingModal({ isOpen, onClose }) {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-0.5">
                 {t('salary_label')}
               </label>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-1.5 font-medium">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2 font-medium">
                 {t('salary_subtext')}
               </p>
               <div className="relative">
@@ -249,28 +259,31 @@ export function FastTrackOnboardingModal({ isOpen, onClose }) {
                 {t('step2_instructions')}
               </p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-52 overflow-y-auto p-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-56 overflow-y-auto p-1">
                 {bills.map((b) => {
                   const Icon = b.icon;
+                  const billTitle = t(b.labelKey) || b.defaultName;
+                  const dueText = formatOrdinalDue(b.due_day, language);
+
                   return (
                     <div
                       key={b.id}
                       onClick={() => toggleBill(b.id)}
-                      className={`p-3 rounded-2xl border flex items-center justify-between gap-2 transition cursor-pointer ${
+                      className={`p-3 rounded-2xl border flex items-center justify-between gap-2.5 transition cursor-pointer ${
                         b.selected
                           ? 'border-green-500 bg-green-50/70 dark:bg-green-950/40 text-green-900 dark:text-green-200 ring-1 ring-green-500/30'
                           : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/30 text-slate-500 dark:text-slate-400 opacity-60'
                       }`}
                     >
-                      <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
                         <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${
                           b.selected ? 'bg-green-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
                         }`}>
                           <Icon className="w-4 h-4" />
                         </div>
-                        <div className="min-w-0">
-                          <p className="font-bold text-xs truncate">{b.name}</p>
-                          <p className="text-[10px] opacity-75">{t('due_day_text', { day: b.due_day })}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-xs leading-tight text-slate-900 dark:text-slate-100">{billTitle}</p>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{dueText}</p>
                         </div>
                       </div>
                       
@@ -280,10 +293,10 @@ export function FastTrackOnboardingModal({ isOpen, onClose }) {
                           value={b.amount}
                           onClick={(e) => e.stopPropagation()}
                           onChange={(e) => updateBillAmount(b.id, e.target.value)}
-                          className="w-20 px-2 py-1 bg-white dark:bg-slate-900 border border-green-300 dark:border-green-800 rounded-lg text-xs font-black text-right text-slate-900 dark:text-slate-50 focus:outline-none"
+                          className="w-18 px-2 py-1 bg-white dark:bg-slate-900 border border-green-300 dark:border-green-800 rounded-lg text-xs font-black text-right text-slate-900 dark:text-slate-50 focus:outline-none flex-shrink-0"
                         />
                       ) : (
-                        <div className="w-5 h-5 rounded-full border border-slate-300 dark:border-slate-700 flex items-center justify-center"></div>
+                        <div className="w-5 h-5 rounded-full border border-slate-300 dark:border-slate-700 flex items-center justify-center flex-shrink-0"></div>
                       )}
                     </div>
                   );
