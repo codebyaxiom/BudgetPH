@@ -1,23 +1,25 @@
-﻿import React from 'react';
-import { Menu, Sun, Moon, PlusCircle } from 'lucide-react';
+import React from 'react';
+import { Menu, Sun, Moon, PlusCircle, Globe } from 'lucide-react';
 import { useBudgetStore } from '../../stores/useBudgetStore';
 import { useThemeStore } from '../../stores/useThemeStore';
+import { useLanguageStore } from '../../stores/useLanguageStore';
 
 export function Header({ activeTab, onOpenMobileMenu }) {
   const { dashboardData, openExpenseModal } = useBudgetStore();
   const { theme, toggleTheme } = useThemeStore();
+  const { language, setLanguage, toggleLanguage, t } = useLanguageStore();
   const activeCycle = dashboardData?.active_cycle;
 
   const pageTitles = {
-    dashboard: 'Financial Dashboard',
-    daily: 'Pang-Araw-Araw na Gastos',
-    reports: 'Financial Health & Analytics',
-    payday: 'Payday Simulator 2.0',
-    obligations: 'Fixed & Variable Obligations',
-    allowances: 'Family Member Allowances',
-    savings: 'Ipon & Emergency Fund Goals',
-    ai: 'AI Budget Advisor Copilot',
-    settings: 'Settings & Data Backup',
+    dashboard: t('dashboard'),
+    daily: t('daily'),
+    reports: t('reports'),
+    payday: t('payday'),
+    obligations: t('obligations'),
+    allowances: t('allowances'),
+    savings: t('savings'),
+    ai: t('ai_advisor'),
+    settings: t('settings'),
   };
 
   return (
@@ -36,14 +38,43 @@ export function Header({ activeTab, onOpenMobileMenu }) {
         </h1>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5 sm:gap-3">
         {activeCycle && (
           <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 rounded-full text-xs font-semibold text-emerald-800 dark:text-emerald-300 shadow-sm">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Active: <strong>₱{Number(activeCycle.expected_amount).toLocaleString()}</strong></span>
+            <span>{t('active_cycle')}: <strong>₱{Number(activeCycle.expected_amount).toLocaleString()}</strong></span>
           </div>
         )}
 
+        {/* Obvious Language Switcher Pill */}
+        <div className="flex items-center p-0.5 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/80 text-xs font-bold shadow-inner">
+          <button
+            onClick={() => setLanguage('en')}
+            className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+              language === 'en'
+                ? 'bg-white dark:bg-slate-700 text-green-700 dark:text-green-300 shadow-sm'
+                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+            title="Switch language to English"
+          >
+            <span>🇺🇸</span>
+            <span className="text-[11px]">EN</span>
+          </button>
+          <button
+            onClick={() => setLanguage('tl')}
+            className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+              language === 'tl'
+                ? 'bg-white dark:bg-slate-700 text-green-700 dark:text-green-300 shadow-sm'
+                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+            title="Switch language to Tagalog / Filipino"
+          >
+            <span>🇵🇭</span>
+            <span className="text-[11px]">TL</span>
+          </button>
+        </div>
+
+        {/* Theme Toggle */}
         <button
           onClick={toggleTheme}
           title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
@@ -56,12 +87,13 @@ export function Header({ activeTab, onOpenMobileMenu }) {
           )}
         </button>
 
+        {/* Quick Log Expense Button */}
         <button
           onClick={openExpenseModal}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-green-600 hover:bg-green-700 active:scale-95 text-white text-xs font-bold shadow-md shadow-green-600/25 transition-all cursor-pointer"
+          className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl bg-green-600 hover:bg-green-700 active:scale-95 text-white text-xs font-bold shadow-md shadow-green-600/25 transition-all cursor-pointer"
         >
           <PlusCircle className="w-4 h-4" />
-          <span className="hidden sm:inline">Log Gastos</span>
+          <span className="hidden sm:inline">{t('log_expense')}</span>
         </button>
       </div>
 

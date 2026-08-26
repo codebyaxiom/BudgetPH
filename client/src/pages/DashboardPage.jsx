@@ -1,10 +1,12 @@
-﻿import React, { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useBudgetStore } from '../stores/useBudgetStore';
+import { useLanguageStore } from '../stores/useLanguageStore';
 import { Wallet, Calendar, AlertTriangle, CheckCircle2, TrendingUp, ArrowRight, DollarSign, Clock, Sparkles, Receipt } from 'lucide-react';
 import * as api from '../services/api';
 
 export function DashboardPage({ setActiveTab }) {
   const { dashboardData, proactiveAlerts, isLoadingDashboard, loadDashboard, openExpenseModal } = useBudgetStore();
+  const { t } = useLanguageStore();
 
   useEffect(() => {
     loadDashboard();
@@ -44,10 +46,10 @@ export function DashboardPage({ setActiveTab }) {
       {/* Welcome Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-50 font-['Plus_Jakarta_Sans']">
-          Mabuhay, {d.user?.name || 'Ka-Budget'}! 👋
+          {t('welcome_user', { name: d.user?.name || 'Ka-Budget' })}
         </h1>
         <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
-          Narito ang iyong personal financial pulse at pang-araw-araw na spending limit.
+          {t('dashboard_subtitle')}
         </p>
       </div>
 
@@ -61,26 +63,26 @@ export function DashboardPage({ setActiveTab }) {
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/20 dark:bg-white/10 backdrop-blur-md rounded-full text-xs font-bold uppercase tracking-wider mb-3">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>{isOverspent ? 'Over Budget Alert' : 'Spendable Today'}</span>
+              <span>{isOverspent ? t('over_budget_alert') : t('spendable_today_hero')}</span>
             </div>
             <h2 className="text-xs sm:text-sm font-medium opacity-90">
-              {isOverspent ? 'Sobra ang nagastos mo ngayong araw ng:' : 'Pwede ka pang gumastos ngayong araw:'}
+              {isOverspent ? t('overspent_sub') : t('spendable_today_sub')}
             </h2>
             <div className="text-4xl sm:text-6xl font-black tracking-tight my-2 font-['Plus_Jakarta_Sans']">
               ₱{Math.abs(remainingToday).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <p className="text-xs sm:text-sm opacity-80">
-              Daily Limit: <strong>₱{Number(dailyBudget).toLocaleString()}</strong> · Nagastos today: <strong>₱{Number(spentToday).toLocaleString()}</strong>
+              {t('daily_limit')}: <strong>₱{Number(dailyBudget).toLocaleString()}</strong> · {t('spent_today')}: <strong>₱{Number(spentToday).toLocaleString()}</strong>
             </p>
           </div>
 
           <div className="bg-white/10 dark:bg-slate-950/40 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-white/20 dark:border-slate-800 flex flex-col gap-2 min-w-[200px]">
             <div className="flex justify-between items-center text-xs">
-              <span className="opacity-80">Next Payday:</span>
-              <span className="font-bold">{d.days_until_payday || 0} araw na lang</span>
+              <span className="opacity-80">{t('next_payday_in')}</span>
+              <span className="font-bold">{t('days_remaining', { days: d.days_until_payday || 0 })}</span>
             </div>
             <div className="flex justify-between items-center text-xs">
-              <span className="opacity-80">Total Spendable Remaining:</span>
+              <span className="opacity-80">{t('total_spendable_rem')}</span>
               <span className="font-bold">₱{Number(d.spendable_remaining || 0).toLocaleString()}</span>
             </div>
             <div className="w-full bg-white/20 dark:bg-slate-800 rounded-full h-2 mt-2">

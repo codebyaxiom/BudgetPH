@@ -2,9 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { Settings as SettingsIcon, Download, CheckCircle2, User, Calendar } from 'lucide-react';
 import * as api from '../services/api';
 import { useBudgetStore } from '../stores/useBudgetStore';
+import { useLanguageStore } from '../stores/useLanguageStore';
 
 export function SettingsPage() {
   const { loadDashboard, openOnboarding } = useBudgetStore();
+  const { language, setLanguage, t } = useLanguageStore();
   const [data, setData] = useState(null);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -174,6 +176,45 @@ export function SettingsPage() {
           </div>
 
         </form>
+      </div>
+
+      {/* Language Preference Card */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h3 className="text-base font-bold text-slate-900 dark:text-slate-50 font-['Plus_Jakarta_Sans'] flex items-center gap-2">
+            <span className="text-lg">🌐</span>
+            <span>Language / Wika</span>
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Choose your preferred display language for the whole application.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setLanguage('en')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+              language === 'en'
+                ? 'bg-green-600 text-white shadow-md'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+            }`}
+          >
+            <span>🇺🇸</span>
+            <span>English (Default)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setLanguage('tl')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+              language === 'tl'
+                ? 'bg-green-600 text-white shadow-md'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+            }`}
+          >
+            <span>🇵🇭</span>
+            <span>Tagalog / Taglish</span>
+          </button>
+        </div>
       </div>
 
       {/* Data Backup Card */}

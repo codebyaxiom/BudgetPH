@@ -1,34 +1,36 @@
-﻿import React from 'react';
+import React from 'react';
 import { LayoutDashboard, CalendarDays, Receipt, Wallet, Users, Bot, TrendingUp, ShieldCheck, Settings, PanelLeftClose, Sparkles } from 'lucide-react';
 import { useBudgetStore } from '../../stores/useBudgetStore';
+import { useLanguageStore } from '../../stores/useLanguageStore';
 
 export function Sidebar({ activeTab, setActiveTab, isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen }) {
   const { dashboardData } = useBudgetStore();
+  const { t } = useLanguageStore();
   const user = dashboardData?.user;
 
   const navGroups = [
     {
       title: 'Overview',
       items: [
-        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-        { id: 'daily', label: 'Daily Gastos', icon: Wallet },
-        { id: 'reports', label: 'Reports & Analytics', icon: TrendingUp },
+        { id: 'dashboard', label: t('dashboard'), icon: LayoutDashboard },
+        { id: 'daily', label: t('daily'), icon: Wallet },
+        { id: 'reports', label: t('reports'), icon: TrendingUp },
       ]
     },
     {
       title: 'Planning & Budgets',
       items: [
-        { id: 'payday', label: 'Payday Simulator', icon: CalendarDays },
-        { id: 'obligations', label: 'Obligations & Bills', icon: Receipt },
-        { id: 'allowances', label: 'Family Allowances', icon: Users },
-        { id: 'savings', label: 'Ipon & Goals', icon: ShieldCheck },
+        { id: 'payday', label: t('payday'), icon: CalendarDays },
+        { id: 'obligations', label: t('obligations'), icon: Receipt },
+        { id: 'allowances', label: t('allowances'), icon: Users },
+        { id: 'savings', label: t('savings'), icon: ShieldCheck },
       ]
     },
     {
       title: 'Intelligence & Settings',
       items: [
-        { id: 'ai', label: 'AI Advisor Copilot', icon: Bot, isAI: true },
-        { id: 'settings', label: 'Settings & Backup', icon: Settings },
+        { id: 'ai', label: t('ai_advisor'), icon: Bot, isAI: true },
+        { id: 'settings', label: t('settings'), icon: Settings },
       ]
     }
   ];

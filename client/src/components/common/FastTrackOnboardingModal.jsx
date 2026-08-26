@@ -1,10 +1,12 @@
-import React, { useState, useId } from 'react';
-import { Sparkles, Calendar, DollarSign, Zap, Home, Wifi, Droplets, CreditCard, Smartphone, Check, ArrowRight, ShieldCheck } from 'lucide-react';
+import React, { useState } from 'react';
+import { Sparkles, Calendar, DollarSign, Zap, Home, Wifi, Droplets, CreditCard, Smartphone, Check, ArrowRight, ShieldCheck, Globe } from 'lucide-react';
 import * as api from '../../services/api';
 import { useBudgetStore } from '../../stores/useBudgetStore';
+import { useLanguageStore } from '../../stores/useLanguageStore';
 
 export function FastTrackOnboardingModal({ isOpen, onClose }) {
   const { loadDashboard } = useBudgetStore();
+  const { language, setLanguage, t } = useLanguageStore();
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -26,10 +28,10 @@ export function FastTrackOnboardingModal({ isOpen, onClose }) {
 
   // Screen 2: Quick Bills Preset
   const [bills, setBills] = useState([
-    { id: 'meralco', name: 'Meralco / Kuryente', category: 'electricity', amount: 2500, due_day: 18, selected: true, icon: Zap },
-    { id: 'rent', name: 'House Rent / Bahay', category: 'rent', amount: 5000, due_day: 1, selected: true, icon: Home },
+    { id: 'meralco', name: 'Meralco (Electricity)', category: 'electricity', amount: 2500, due_day: 18, selected: true, icon: Zap },
+    { id: 'rent', name: 'House Rent / Condo', category: 'rent', amount: 5000, due_day: 1, selected: true, icon: Home },
     { id: 'wifi', name: 'PLDT / Converge Wifi', category: 'internet', amount: 1500, due_day: 25, selected: true, icon: Wifi },
-    { id: 'water', name: 'Maynilad / Tubig', category: 'water', amount: 500, due_day: 22, selected: true, icon: Droplets },
+    { id: 'water', name: 'Maynilad / Water', category: 'water', amount: 500, due_day: 22, selected: true, icon: Droplets },
     { id: 'card', name: 'Credit Card / SpayLater', category: 'credit_card', amount: 1500, due_day: 5, selected: false, icon: CreditCard },
     { id: 'load', name: 'Phone Load / Postpaid', category: 'subscriptions', amount: 500, due_day: 15, selected: false, icon: Smartphone },
   ]);
@@ -96,46 +98,77 @@ export function FastTrackOnboardingModal({ isOpen, onClose }) {
         {/* Top Gradient Ribbon */}
         <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500"></div>
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        {/* Header & Prominent Language Chooser */}
+        <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-green-600/10 dark:bg-green-500/20 text-green-600 dark:text-green-400 flex items-center justify-center font-black text-xl">
               🇵🇭
             </div>
             <div>
               <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-50 font-['Plus_Jakarta_Sans']">
-                Welcome sa BudgetPH!
+                {t('onboarding_title')}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                {step === 1 ? 'Step 1 of 2 · Sahod at Schedule' : 'Step 2 of 2 · Mga Fixed Bills & Commitments'}
+                {step === 1 ? t('onboarding_subtitle_step1') : t('onboarding_subtitle_step2')}
               </p>
             </div>
           </div>
-          <div className="flex gap-1.5">
-            <div className={`w-6 h-2 rounded-full transition-all ${step === 1 ? 'bg-green-600' : 'bg-green-200 dark:bg-slate-700'}`}></div>
-            <div className={`w-6 h-2 rounded-full transition-all ${step === 2 ? 'bg-green-600' : 'bg-green-200 dark:bg-slate-700'}`}></div>
+
+          <div className="flex items-center gap-3">
+            {/* Language Selector Pill */}
+            <div className="flex items-center p-0.5 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/80 text-xs font-bold shadow-inner">
+              <button
+                type="button"
+                onClick={() => setLanguage('en')}
+                className={`px-2 py-1 rounded-lg transition cursor-pointer flex items-center gap-1 ${
+                  language === 'en'
+                    ? 'bg-white dark:bg-slate-700 text-green-700 dark:text-green-300 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                <span>🇺🇸</span>
+                <span className="text-[10px]">EN</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setLanguage('tl')}
+                className={`px-2 py-1 rounded-lg transition cursor-pointer flex items-center gap-1 ${
+                  language === 'tl'
+                    ? 'bg-white dark:bg-slate-700 text-green-700 dark:text-green-300 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                <span>🇵🇭</span>
+                <span className="text-[10px]">TL</span>
+              </button>
+            </div>
+
+            <div className="hidden sm:flex gap-1.5">
+              <div className={`w-5 h-2 rounded-full transition-all ${step === 1 ? 'bg-green-600' : 'bg-green-200 dark:bg-slate-700'}`}></div>
+              <div className={`w-5 h-2 rounded-full transition-all ${step === 2 ? 'bg-green-600' : 'bg-green-200 dark:bg-slate-700'}`}></div>
+            </div>
           </div>
         </div>
 
         {step === 1 ? (
           /* ================= STEP 1: INCOME & SCHEDULE ================= */
-          <div className="space-y-5 animate-in slide-in-from-right-4 duration-200">
+          <div className="space-y-4 animate-in slide-in-from-right-4 duration-200">
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Ano ang iyong pangalan o palayaw?
+                {t('name_label')}
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Juan, Maria, Kuya Dennis"
+                placeholder={t('name_placeholder')}
                 className="w-full px-4 py-3 rounded-2xl border border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/60 font-semibold text-slate-900 dark:text-slate-50 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none"
               />
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Magkano ang take-home pay mo kada cut-off? (₱)
+                {t('salary_label')}
               </label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-lg">₱</span>
@@ -152,19 +185,19 @@ export function FastTrackOnboardingModal({ isOpen, onClose }) {
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
-                Kailan ang pasok ng sahod mo?
+                {t('schedule_label')}
               </label>
               <div className="grid grid-cols-3 gap-2.5">
                 {[
-                  { id: 'semi-monthly', label: '15th & 30th', desc: 'Katapusan (Standard PH)' },
-                  { id: 'monthly', label: 'Monthly', desc: 'Isang bagsakan (25th/30th)' },
-                  { id: 'weekly', label: 'Weekly', desc: 'Kada linggo / Gig' },
+                  { id: 'semi-monthly', label: t('schedule_semi_monthly'), desc: t('schedule_semi_monthly_desc') },
+                  { id: 'monthly', label: t('schedule_monthly'), desc: t('schedule_monthly_desc') },
+                  { id: 'weekly', label: t('schedule_weekly'), desc: t('schedule_weekly_desc') },
                 ].map((item) => (
                   <button
                     key={item.id}
                     type="button"
                     onClick={() => setFrequency(item.id)}
-                    className={`p-3 rounded-2xl border text-left transition-all ${
+                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                       frequency === item.id
                         ? 'border-green-500 bg-green-50/80 dark:bg-green-950/40 text-green-900 dark:text-green-300 ring-2 ring-green-500/20'
                         : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
@@ -179,7 +212,7 @@ export function FastTrackOnboardingModal({ isOpen, onClose }) {
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Kailan ang susunod mong sahod?
+                {t('next_payday_label')}
               </label>
               <input
                 type="date"
@@ -194,26 +227,26 @@ export function FastTrackOnboardingModal({ isOpen, onClose }) {
               type="button"
               onClick={() => {
                 if (!incomeAmount || parseFloat(incomeAmount) <= 0) {
-                  alert('Pakilagay ang iyong sahod para makalkula ang budget.');
+                  alert(language === 'tl' ? 'Pakilagay ang iyong sahod para makalkula ang budget.' : 'Please enter your salary to calculate your budget.');
                   return;
                 }
                 setStep(2);
               }}
               className="w-full py-3.5 bg-green-600 hover:bg-green-700 text-white font-bold text-sm rounded-2xl shadow-lg shadow-green-600/20 flex items-center justify-center gap-2 transition cursor-pointer mt-4"
             >
-              <span>Sunod: Mga Bayarin & Bills</span>
+              <span>{t('next_step_btn')}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         ) : (
           /* ================= STEP 2: QUICK BILLS & COMMITMENTS ================= */
-          <form onSubmit={handleSubmit} className="space-y-5 animate-in slide-in-from-right-4 duration-200">
+          <form onSubmit={handleSubmit} className="space-y-4 animate-in slide-in-from-right-4 duration-200">
             <div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-                I-click ang mga bills na kailangan mong bayaran sa darating na cut-off:
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-2.5">
+                {t('step2_instructions')}
               </p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-56 overflow-y-auto p-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-52 overflow-y-auto p-1">
                 {bills.map((b) => {
                   const Icon = b.icon;
                   return (
@@ -234,7 +267,7 @@ export function FastTrackOnboardingModal({ isOpen, onClose }) {
                         </div>
                         <div className="min-w-0">
                           <p className="font-bold text-xs truncate">{b.name}</p>
-                          <p className="text-[10px] opacity-75">Due ika-{b.due_day}</p>
+                          <p className="text-[10px] opacity-75">{t('due_day_text', { day: b.due_day })}</p>
                         </div>
                       </div>
                       
@@ -256,7 +289,7 @@ export function FastTrackOnboardingModal({ isOpen, onClose }) {
             </div>
 
             {/* Emergency Fund Checkbox */}
-            <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
               <label className="flex items-center gap-2.5 text-xs font-bold text-slate-800 dark:text-slate-200 cursor-pointer">
                 <input
                   type="checkbox"
@@ -264,7 +297,7 @@ export function FastTrackOnboardingModal({ isOpen, onClose }) {
                   onChange={(e) => setIncludeEmergencyFund(e.target.checked)}
                   className="rounded text-green-600 focus:ring-green-500 w-4 h-4"
                 />
-                <span>Tabihan ng pondo para sa Emergency Fund (Ipon)</span>
+                <span>{t('emergency_checkbox')}</span>
               </label>
               {includeEmergencyFund && (
                 <div className="flex items-center gap-1">
@@ -282,30 +315,30 @@ export function FastTrackOnboardingModal({ isOpen, onClose }) {
             {/* Instant Calculation Preview */}
             <div className="bg-gradient-to-br from-emerald-600 to-teal-700 dark:from-emerald-950 dark:to-slate-900 text-white rounded-2xl p-4 shadow-md">
               <div className="flex justify-between items-center text-xs opacity-90 pb-2 border-b border-white/10">
-                <span>Spendable Balance (Wants / Pang-Araw-Araw):</span>
+                <span>{t('spendable_balance')}</span>
                 <span className="font-bold">₱{spendableRemaining.toLocaleString()}</span>
               </div>
               <div className="flex justify-between items-center pt-2">
                 <div>
-                  <span className="text-[11px] uppercase tracking-wider opacity-80 block">Safe Spendable Today:</span>
+                  <span className="text-[11px] uppercase tracking-wider opacity-80 block">{t('spendable_today')}</span>
                   <span className="text-2xl font-black font-['Plus_Jakarta_Sans']">
-                    ₱{Number(estimatedDaily).toLocaleString('en-PH', { minimumFractionDigits: 2 })} / day
+                    ₱{Number(estimatedDaily).toLocaleString('en-PH', { minimumFractionDigits: 2 })} {t('per_day')}
                   </span>
                 </div>
                 <div className="text-right text-[11px] opacity-80">
-                  <span>{diffDays} araw hanggang</span>
+                  <span>{diffDays} {t('days_until')}</span>
                   <p className="font-bold">{nextPaydayDate}</p>
                 </div>
               </div>
             </div>
 
-            <div className="flex gap-2.5 pt-2">
+            <div className="flex gap-2.5 pt-1">
               <button
                 type="button"
                 onClick={() => setStep(1)}
                 className="px-5 py-3 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-2xl transition cursor-pointer"
               >
-                Back
+                {t('back_btn')}
               </button>
               <button
                 type="submit"
@@ -313,11 +346,11 @@ export function FastTrackOnboardingModal({ isOpen, onClose }) {
                 className="flex-1 py-3.5 bg-green-600 hover:bg-green-700 text-white font-bold text-sm rounded-2xl shadow-lg shadow-green-600/20 flex items-center justify-center gap-2 transition cursor-pointer disabled:opacity-50"
               >
                 {isSubmitting ? (
-                  <span>Kinakalkula...</span>
+                  <span>{t('calculating')}</span>
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4" />
-                    <span>Simulan ang Aking Budget! 🚀</span>
+                    <span>{t('launch_btn')}</span>
                   </>
                 )}
               </button>
