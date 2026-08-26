@@ -1,10 +1,10 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Settings as SettingsIcon, Download, CheckCircle2, User, Calendar } from 'lucide-react';
 import * as api from '../services/api';
 import { useBudgetStore } from '../stores/useBudgetStore';
 
 export function SettingsPage() {
-  const { loadDashboard } = useBudgetStore();
+  const { loadDashboard, openOnboarding } = useBudgetStore();
   const [data, setData] = useState(null);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -193,6 +193,25 @@ export function SettingsPage() {
         >
           <Download className="w-4 h-4" />
           <span>Export JSON</span>
+        </button>
+      </div>
+
+      {/* Fast-Track Re-run Card */}
+      <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-slate-900 border border-emerald-200 dark:border-emerald-800/50 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h3 className="text-base font-bold text-slate-900 dark:text-slate-50 font-['Plus_Jakarta_Sans'] flex items-center gap-2">
+            <span className="text-lg">⚡</span>
+            <span>Fast-Track Setup Wizard</span>
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Gusto mo bang i-reset o i-reconfigure ang iyong cut-off sahod at quick bill allocations?
+          </p>
+        </div>
+        <button
+          onClick={() => openOnboarding()}
+          className="px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-2 transition cursor-pointer flex-shrink-0"
+        >
+          <span>Open Setup Wizard</span>
         </button>
       </div>
 

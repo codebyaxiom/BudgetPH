@@ -1,4 +1,4 @@
-﻿import { create } from 'zustand';
+import { create } from 'zustand';
 import * as api from '../services/api.js';
 
 export const useBudgetStore = create((set, get) => ({
@@ -6,9 +6,24 @@ export const useBudgetStore = create((set, get) => ({
   proactiveAlerts: [],
   isLoadingDashboard: false,
   isExpenseModalOpen: false,
+  isOnboardingOpen: false,
 
   openExpenseModal: () => set({ isExpenseModalOpen: true }),
   closeExpenseModal: () => set({ isExpenseModalOpen: false }),
+
+  openOnboarding: () => set({ isOnboardingOpen: true }),
+  closeOnboarding: () => set({ isOnboardingOpen: false }),
+
+  checkOnboardingStatus: async () => {
+    try {
+      const res = await api.fetchOnboardingStatus();
+      if (res.success && (!res.profile_completed || !res.hasActiveCycle)) {
+        set({ isOnboardingOpen: true });
+      }
+    } catch (err) {
+      console.warn('checkOnboardingStatus error:', err);
+    }
+  },
 
   loadDashboard: async () => {
     set({ isLoadingDashboard: true });

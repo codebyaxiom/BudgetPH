@@ -1,7 +1,8 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { LogExpenseModal } from './components/common/LogExpenseModal';
+import { FastTrackOnboardingModal } from './components/common/FastTrackOnboardingModal';
 import { DashboardPage } from './pages/DashboardPage';
 import { DailyPage } from './pages/DailyPage';
 import { ReportsPage } from './pages/ReportsPage';
@@ -11,11 +12,18 @@ import { AllowancesPage } from './pages/AllowancesPage';
 import { SavingsPage } from './pages/SavingsPage';
 import { AIChatPage } from './pages/AIChatPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { useBudgetStore } from './stores/useBudgetStore';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  const { isOnboardingOpen, closeOnboarding, checkOnboardingStatus } = useBudgetStore();
+
+  useEffect(() => {
+    checkOnboardingStatus();
+  }, [checkOnboardingStatus]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -60,6 +68,7 @@ export default function App() {
       </div>
 
       <LogExpenseModal />
+      <FastTrackOnboardingModal isOpen={isOnboardingOpen} onClose={closeOnboarding} />
     </div>
   );
 }

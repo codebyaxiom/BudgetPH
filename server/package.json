@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "budgetph-server",
   "version": "1.0.0",
   "description": "Express backend for BudgetPH",
@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "node --watch src/server.js"
+    "dev": "node --watch src/server.js",
+    "db:init": "node scripts/init_v2_db.js"
   },
   "dependencies": {
     "axios": "^1.7.9",

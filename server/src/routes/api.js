@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import * as dashboard from '../controllers/dashboardController.js';
 import * as payday from '../controllers/paydayController.js';
 import * as expenses from '../controllers/expensesController.js';
@@ -8,8 +8,14 @@ import * as savings from '../controllers/savingsController.js';
 import * as reports from '../controllers/reportsController.js';
 import * as settings from '../controllers/settingsController.js';
 import * as ai from '../controllers/aiController.js';
+import * as onboarding from '../controllers/onboardingController.js';
 
 const router = express.Router();
+
+// Onboarding
+router.get('/onboarding/status', onboarding.getOnboardingStatus);
+router.post('/onboarding/fast-track', onboarding.completeFastTrackOnboarding);
+
 
 // Dashboard
 router.get('/dashboard', dashboard.getDashboard);

@@ -1,4 +1,4 @@
-﻿const API_BASE = '/api';
+const API_BASE = '/api';
 
 async function request(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`;
@@ -22,8 +22,13 @@ async function request(endpoint, options = {}) {
   return res.json();
 }
 
+// Onboarding
+export const fetchOnboardingStatus = () => request('/onboarding/status');
+export const completeFastTrackOnboarding = (payload) => request('/onboarding/fast-track', { method: 'POST', body: payload });
+
 // Dashboard
 export const fetchDashboard = () => request('/dashboard');
+
 
 // Payday
 export const fetchPaydaySetup = () => request('/payday/setup');
