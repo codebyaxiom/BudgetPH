@@ -167,9 +167,12 @@ export function FastTrackOnboardingModal({ isOpen, onClose }) {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                 {t('salary_label')}
               </label>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-1.5 font-medium">
+                {t('salary_subtext')}
+              </p>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-lg">₱</span>
                 <input
