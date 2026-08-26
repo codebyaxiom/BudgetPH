@@ -1,10 +1,12 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ShieldCheck, Plus, Sparkles, TrendingUp, CheckCircle2, DollarSign } from 'lucide-react';
 import * as api from '../services/api';
 import { useBudgetStore } from '../stores/useBudgetStore';
+import { useLanguageStore } from '../stores/useLanguageStore';
 
 export function SavingsPage() {
   const { loadDashboard } = useBudgetStore();
+  const { language, t } = useLanguageStore();
   const [data, setData] = useState(null);
   const [isDepositOpen, setIsDepositOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -67,10 +69,10 @@ export function SavingsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-50 font-['Plus_Jakarta_Sans']">
-            Ipon & Emergency Fund Tracker 🏦
+            {t('savings_header')}
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
-            Palakihin ang iyong emergency safety net at sinking funds para sa mga pangarap.
+            {t('savings_subheader')}
           </p>
         </div>
         <button
@@ -78,7 +80,7 @@ export function SavingsPage() {
           className="px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold text-xs rounded-xl shadow-md flex items-center gap-1.5 transition cursor-pointer"
         >
           <Plus className="w-4 h-4" />
-          <span>Add Savings Goal</span>
+          <span>{t('add_savings_goal_btn')}</span>
         </button>
       </div>
 
@@ -91,16 +93,15 @@ export function SavingsPage() {
               <span>Emergency Fund Coverage</span>
             </div>
             <h2 className="text-3xl sm:text-5xl font-black font-['Plus_Jakarta_Sans']">
-              {summary.emergencyFundMonths || 0} Buwan ng Gastusin
+              {t('emergency_coverage_months', { months: summary.emergencyFundMonths || 0 })}
             </h2>
             <p className="text-xs sm:text-sm opacity-80 max-w-lg">
-              Batay sa iyong buwanang fixed bills na <strong>₱{Number(summary.monthlyBillsBenchmark || 0).toLocaleString()}</strong>.
-              Ang ideal na emergency fund ay 3 hanggang 6 na buwan.
+              {t('emergency_desc', { amount: Number(summary.monthlyBillsBenchmark || 0).toLocaleString() })}
             </p>
           </div>
 
           <div className="bg-white/10 dark:bg-slate-900/60 backdrop-blur-md p-5 rounded-2xl border border-white/20 dark:border-slate-800 min-w-[220px]">
-            <p className="text-xs opacity-80">Kabuuang Naipon sa Lahat ng Goals:</p>
+            <p className="text-xs opacity-80">{t('total_saved_all_goals')}</p>
             <p className="text-2xl sm:text-3xl font-black mt-1">₱{Number(summary.totalCurrent || 0).toLocaleString()}</p>
             <p className="text-[11px] opacity-70 mt-1">Target: ₱{Number(summary.totalTarget || 0).toLocaleString()}</p>
           </div>
@@ -126,7 +127,7 @@ export function SavingsPage() {
 
               <div className="my-4">
                 <div className="flex justify-between text-xs font-bold mb-1.5">
-                  <span className="text-slate-500">Naipon</span>
+                  <span className="text-slate-500">{t('saved_progress_label')}</span>
                   <span className="text-slate-900 dark:text-slate-50">₱{Number(g.current_amount).toLocaleString()} / ₱{Number(g.target_amount).toLocaleString()}</span>
                 </div>
                 <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-3">
@@ -139,7 +140,7 @@ export function SavingsPage() {
 
               {g.per_payday_contribution > 0 && (
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Auto allocation: <strong>₱{Number(g.per_payday_contribution).toLocaleString()}</strong> kada sahod
+                  {t('auto_allocation_desc', { amount: Number(g.per_payday_contribution).toLocaleString() })}
                 </p>
               )}
             </div>
@@ -153,7 +154,7 @@ export function SavingsPage() {
                 className="w-full py-2 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold text-xs rounded-xl border border-emerald-200 dark:border-emerald-800/60 transition cursor-pointer flex items-center justify-center gap-1.5"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Mag-ipon / Deposit</span>
+                <span>{t('deposit_btn')}</span>
               </button>
             </div>
           </div>

@@ -89,7 +89,7 @@ export async function getProactiveAlerts(req, res) {
 export async function sendMessage(req, res) {
   try {
     const userId = 1;
-    const { message } = req.body;
+    const { message, lang = 'en' } = req.body;
     if (!message) return res.status(400).json({ success: false, error: 'Message required' });
 
     // Save user message
@@ -108,16 +108,19 @@ export async function sendMessage(req, res) {
       );
       const recentTurns = recentRows.reverse();
 
-      const systemPrompt = `You are BudgetPH, a friendly and smart Filipino financial advisor (smart Ate/Kuya).
-You speak naturally in Taglish (mix of English and Tagalog).
-Ground all advice strictly in the user's real numbers:
+      const systemPrompt = `You are BudgetPH, a friendly, smart, and empowering financial advisor for Filipino users.
+Language Guidelines:
+- If the user talks or prompts in Tagalog / Taglish, respond naturally in warm Taglish (mix of English & Tagalog).
+- If the user talks in English, respond in clear, encouraging, professional English.
+- App Default Language: ${lang === 'tl' ? 'Tagalog' : 'English'}.
+Live Financial Context of User:
 - Daily Spendable Budget: ₱${snapshot.daily_budget}
 - Remaining Today: ₱${snapshot.remaining_today}
 - Spent Today: ₱${snapshot.spent_today}
 - Days until Payday: ${snapshot.days_until_payday} days
 - Total Cycle Spendable Remaining: ₱${snapshot.spendable_remaining}
 - Pending Bills: ${snapshot.pending_obligations} bills
-Always answer with clarity, warmth, and exact calculations.`;
+Always answer with clarity, warmth, and exact arithmetic based on these numbers.`;
 
       const messages = [
         { role: 'system', content: systemPrompt },
@@ -140,22 +143,39 @@ Always answer with clarity, warmth, and exact calculations.`;
           timeout: 15000
         }
       );
-      aiResponse = groqRes.data?.choices?.[0]?.message?.content || 'Pasensya na, walang tugon.';
+      aiResponse = groqRes.data?.choices?.[0]?.message?.content || (lang === 'tl' ? 'Pasensya na, walang tugon mula sa AI.' : 'Sorry, no response from AI.');
     } else {
       // Local rule-based advisor
       const msg = message.toLowerCase();
-      if (msg.includes('afford') || msg.includes('pwede') || msg.includes('bilhin') || msg.includes('bumili')) {
+      const isTagalogInput = msg.includes('pwede') || msg.includes('bilhin') || msg.includes('bumili') || msg.includes('gastos') || msg.includes('magkano') || lang === 'tl';
+
+      if (msg.includes('afford') || msg.includes('pwede') || msg.includes('bilhin') || msg.includes('bumili') || msg.includes('buy')) {
         const match = msg.match(/\d+[\d,]*/);
         const amount = match ? parseFloat(match[0].replace(/,/g, '')) : 0;
-        if (amount > 0 && amount <= snapshot.remaining_today) {
-          aiResponse = `✅ **Oo, kayang-kaya mo ito today!**\n- **Halaga:** ₱${amount.toLocaleString()}\n- **Daily remaining today:** ₱${snapshot.remaining_today.toLocaleString()}\n- **Matitira pa:** ₱${(snapshot.remaining_today - amount).toLocaleString()}\n\nPasok na pasok sa daily budget mo!`;
-        } else if (amount > snapshot.remaining_today && amount <= snapshot.spendable_remaining) {
-          aiResponse = `⚠️ **Kaya sa total cycle budget, pero ma-ooverspend ka for today.**\n- **Halaga:** ₱${amount.toLocaleString()}\n- **Daily remaining:** ₱${snapshot.remaining_today.toLocaleString()}\n- **Cycle spendable:** ₱${snapshot.spendable_remaining.toLocaleString()}\n\nKung bibilhin mo ito ngayon, kailangan magbawas sa mga susunod na araw (${snapshot.days_until_payday} days left).`;
+
+        if (isTagalogInput) {
+          if (amount > 0 && amount <= snapshot.remaining_today) {
+            aiResponse = `✅ **Oo, kayang-kaya mo ito today!**\n- **Halaga:** ₱${amount.toLocaleString()}\n- **Daily remaining today:** ₱${snapshot.remaining_today.toLocaleString()}\n- **Matitira pa:** ₱${(snapshot.remaining_today - amount).toLocaleString()}\n\nPasok na pasok sa safe daily budget mo!`;
+          } else if (amount > snapshot.remaining_today && amount <= snapshot.spendable_remaining) {
+            aiResponse = `⚠️ **Kaya sa total cycle budget, pero ma-ooverspend ka for today.**\n- **Halaga:** ₱${amount.toLocaleString()}\n- **Daily remaining:** ₱${snapshot.remaining_today.toLocaleString()}\n- **Cycle spendable:** ₱${snapshot.spendable_remaining.toLocaleString()}\n\nKung bibilhin mo ito ngayon, kailangan magbawas sa mga susunod na araw (${snapshot.days_until_payday} araw na lang bago mag-sahod).`;
+          } else {
+            aiResponse = `❌ **Hindi advisable bilhin ito ngayon.** Kulang ang natitirang spendable budget (₱${snapshot.spendable_remaining.toLocaleString()}) bago ang next sahod.`;
+          }
         } else {
-          aiResponse = `❌ **Hindi advisable bilhin ito ngayon.** Kulang ang natitirang spendable budget (₱${snapshot.spendable_remaining.toLocaleString()}) bago ang next sahod.`;
+          if (amount > 0 && amount <= snapshot.remaining_today) {
+            aiResponse = `✅ **Yes, you can comfortably afford this today!**\n- **Purchase Amount:** ₱${amount.toLocaleString()}\n- **Daily Remaining Today:** ₱${snapshot.remaining_today.toLocaleString()}\n- **Remaining After Purchase:** ₱${(snapshot.remaining_today - amount).toLocaleString()}\n\nThis fits comfortably within your safe daily budget!`;
+          } else if (amount > snapshot.remaining_today && amount <= snapshot.spendable_remaining) {
+            aiResponse = `⚠️ **Covered by total cycle budget, but exceeds today's daily limit.**\n- **Amount:** ₱${amount.toLocaleString()}\n- **Safe Daily Limit Remaining:** ₱${snapshot.remaining_today.toLocaleString()}\n- **Total Cycle Spendable:** ₱${snapshot.spendable_remaining.toLocaleString()}\n\nIf you make this purchase, you'll need to trim spending over the next ${snapshot.days_until_payday} days before payday.`;
+          } else {
+            aiResponse = `❌ **Not recommended right now.** Your remaining spendable balance (₱${snapshot.spendable_remaining.toLocaleString()}) cannot cover this amount before next payday.`;
+          }
         }
       } else {
-        aiResponse = `Kumusta! Narito ang quick budget pulse mo:\n- **Daily remaining today:** ₱${snapshot.remaining_today.toLocaleString()}\n- **Days until next payday:** ${snapshot.days_until_payday} days\n- **Pending bills:** ${snapshot.pending_obligations}\n\nTanungin mo ako kung may balak kang bilhin o bayaran!`;
+        if (isTagalogInput) {
+          aiResponse = `Kumusta! Narito ang quick budget pulse mo:\n- **Safe na pwedeng gastusin today:** ₱${snapshot.remaining_today.toLocaleString()}\n- **Araw bago ang susunod na sahod:** ${snapshot.days_until_payday} araw\n- **Mga parating na bills:** ${snapshot.pending_obligations}\n\nMagtanong kung may balak kang bilhin o pag-ipunan!`;
+        } else {
+          aiResponse = `Hello! Here is your quick budget pulse:\n- **Safe Spendable Today:** ₱${snapshot.remaining_today.toLocaleString()}\n- **Days Until Next Payday:** ${snapshot.days_until_payday} days\n- **Pending Obligations:** ${snapshot.pending_obligations} bills\n\nFeel free to ask if you can afford a purchase or how to plan your upcoming expenses!`;
+        }
       }
     }
 

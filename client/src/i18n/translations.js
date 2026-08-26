@@ -110,57 +110,50 @@ export const translations = {
     save_expense_btn: 'Save Expense Record',
     delete_confirm_expense: 'Delete this expense record?',
 
-    // Payday Simulator
-    payday_header: 'Payday Simulator 2.0 🎯',
-    payday_subheader: 'Simulate your upcoming salary allocation before spending a single peso.',
-    sim_income_label: 'Expected Take-Home Pay (₱)',
-    sim_obligations: 'Fixed Obligations',
-    sim_allowances: 'Family Allowances',
-    sim_emergency: 'Emergency Fund Contribution',
-    sim_spendable: 'Calculated Spendable Balance',
-    sim_daily_safe: 'Estimated Daily Limit',
-    sim_save_cycle_btn: 'Commit as Active Payday Cycle',
-
-    // Obligations
-    obligations_header: 'Bills & Fixed Obligations 📋',
-    obligations_subheader: 'Manage recurring utility bills, loan repayments, and monthly dues.',
-    add_obligation_btn: '+ Add New Bill',
-    total_obligations_stat: 'Total Monthly Obligations',
-    pending_bills_stat: 'Pending Bills',
-    paid_bills_stat: 'Paid This Cycle',
-    bill_name_label: 'Bill Name',
-    due_day_month_label: 'Due Day of Month (1-31)',
-    frequency_label: 'Frequency',
-    cutoff_assignment_label: 'Cut-off Assignment',
-
-    // Allowances
-    allowances_header: 'Family Member Allowances 👨‍👩‍👧‍👦',
-    allowances_subheader: 'Allocate budgets and baon for children, spouse, or parents.',
-    add_member_btn: '+ Add Family Member',
-    total_allowance_allocated: 'Total Allowances Allocated',
-    member_name_label: 'Member Name',
-    relationship_label: 'Relationship',
-
-    // Savings
-    savings_header: 'Savings & Emergency Fund Goals 🛡️',
-    savings_subheader: 'Build your safety net and track long-term financial goals.',
-    add_goal_btn: '+ New Savings Goal',
-    total_saved_stat: 'Total Amount Saved',
-    goal_name_label: 'Goal Name',
-    target_amount_label: 'Target Amount (₱)',
-    current_amount_label: 'Current Saved (₱)',
-    deposit_btn: '+ Deposit Funds',
-
-    // AI Advisor Copilot
-    ai_header: 'AI Financial Advisor Copilot 🤖',
-    ai_subheader: 'Ask questions about your budget, cut-off pacing, and how to survive petsa de peligro.',
-    ai_placeholder: 'Ask BudgetPH (e.g. "Can I afford to eat out today?", "How can I budget for tuition?")...',
-    ai_send_btn: 'Send',
-    clear_chat_btn: 'Clear Chat',
-
-    // Reports
+    // Reports & Analytics
     reports_header: 'Financial Health & Analytics 📊',
-    reports_subheader: 'Historical spending trends, category breakdown, and financial discipline metrics.',
+    reports_subheader: 'Comprehensive breakdown of your spending discipline, habit score, and budget buffer.',
+    health_score_badge: 'BudgetPH Health Score',
+    score_healthy: '🌟 Great Condition (Healthy)',
+    score_attention: '⚠️ Moderate (Needs Attention)',
+    score_risk: '🚨 Critical (High Risk)',
+    score_explanation: 'Your score is based on your fixed obligations ratio ({obligationsRatio}%), regret rate ({regretPercentage}%), and emergency savings buffer.',
+    calculated_score_label: 'Calculated Score',
+    needs_title: '✅ Needs (Essential)',
+    needs_desc: 'Food, transportation, utilities, and basic bills',
+    wants_title: '🛍️ Wants (Discretionary)',
+    wants_desc: 'Coffee, dining out, shopping, and recreation',
+    regrets_title: '🤦 Regrets (Impulsive)',
+    regrets_desc: 'Target: Keep below 5% of spending',
+
+    // Savings & Emergency Fund
+    savings_header: 'Savings & Emergency Fund Tracker 🏦',
+    savings_subheader: 'Build your safety net and fund your goals before discretionary spending.',
+    add_savings_goal_btn: '+ Add Savings Goal',
+    emergency_coverage_months: '{months} Months of Expenses',
+    emergency_desc: 'Based on your monthly fixed obligations of ₱{amount}. An ideal safety net is 3 to 6 months.',
+    total_saved_all_goals: 'Total Saved Across All Goals:',
+    auto_allocation_desc: 'Auto allocation: ₱{amount} per cut-off',
+    saved_progress_label: 'Saved',
+
+    // AI Financial Advisor Copilot
+    ai_header: 'BudgetPH AI Advisor',
+    ai_subtitle: 'Your personal AI financial copilot. Ask in English or Tagalog anytime!',
+    ai_welcome_msg: 'Hello, {name}! 👋 I am your **BudgetPH AI Advisor**. I am here to help you monitor your daily spending limit, upcoming bills, and cut-off budgeting. How can I help you today?',
+    ai_thinking: 'BudgetPH is thinking...',
+    ai_suggestion_1: 'Can I afford a ₱300 coffee today?',
+    ai_suggestion_2: 'What bills are due this week?',
+    ai_suggestion_3: 'How much is my safe spendable balance?',
+    ai_placeholder: 'Ask about your budget, daily spending, or upcoming bills...',
+    ai_cleared_msg: 'Chat history has been cleared! 🧹 What would you like to check regarding your budget?',
+    clear_history_confirm: 'Clear AI conversation history?',
+    clear_history_btn: 'Clear History',
+
+    // Settings
+    settings_header: 'Settings & Data Management ⚙️',
+    settings_subtitle: 'Manage your profile preferences, export backups, or re-run setup.',
+    backup_card_desc: 'Download a complete JSON backup of all your transactions, cycles, and obligations.',
+    wizard_card_desc: 'Want to adjust your take-home pay, next payday date, or quick bill presets?',
 
     // Common
     cancel: 'Cancel',
@@ -286,57 +279,50 @@ export const translations = {
     save_expense_btn: 'I-save ang Gastos',
     delete_confirm_expense: 'Tanggalin ang expense record na ito?',
 
-    // Payday Simulator
-    payday_header: 'Payday Simulator 2.0 🎯',
-    payday_subheader: 'I-simulate ang alokasyon ng sahod bago pa man gumastos ng kahit piso.',
-    sim_income_label: 'Inaasahang Sahod (₱)',
-    sim_obligations: 'Fixed Obligations',
-    sim_allowances: 'Family Allowances',
-    sim_emergency: 'Emergency Fund Ipon',
-    sim_spendable: 'Kinalkulang Spendable Balance',
-    sim_daily_safe: 'Tantyang Limit Bawat Araw',
-    sim_save_cycle_btn: 'I-commit bilang Aktibong Sahod',
-
-    // Obligations
-    obligations_header: 'Mga Bayarin at Fixed Bills 📋',
-    obligations_subheader: 'I-manage ang mga bayarin sa kuryente, tubig, internet, at pautang.',
-    add_obligation_btn: '+ Magdagdag ng Bagong Bill',
-    total_obligations_stat: 'Kabuuang Buwanang Bayarin',
-    pending_bills_stat: 'Mga Hindi Pa Bayad',
-    paid_bills_stat: 'Bayad Na sa Cut-off na Ito',
-    bill_name_label: 'Pangalan ng Bill',
-    due_day_month_label: 'Araw ng Due sa Buwan (1-31)',
-    frequency_label: 'Dalas ng Pagbayad',
-    cutoff_assignment_label: 'Cut-off Assignment',
-
-    // Allowances
-    allowances_header: 'Family Member Allowances 👨‍👩‍👧‍👦',
-    allowances_subheader: 'Magtabi ng baon at badyet para sa mga anak, asawa, o magulang.',
-    add_member_btn: '+ Magdagdag ng Miyembro',
-    total_allowance_allocated: 'Kabuuang Nakalaang Baon',
-    member_name_label: 'Pangalan ng Miyembro',
-    relationship_label: 'Relasyon',
-
-    // Savings
-    savings_header: 'Ipon at Emergency Fund Goals 🛡️',
-    savings_subheader: 'Bumuo ng emergency safety net at subaybayan ang mga pangarap na ipon.',
-    add_goal_btn: '+ Bagong Target na Ipon',
-    total_saved_stat: 'Kabuuang Naipon',
-    goal_name_label: 'Pangalan ng Goal',
-    target_amount_label: 'Target na Halaga (₱)',
-    current_amount_label: 'Kasalukuyang Naipon (₱)',
-    deposit_btn: '+ Maghulog ng Ipon',
-
-    // AI Advisor Copilot
-    ai_header: 'AI Financial Advisor Copilot 🤖',
-    ai_subheader: 'Magtanong tungkol sa iyong badyet, cut-off pacing, at paraan para maiwasan ang petsa de peligro.',
-    ai_placeholder: 'Magtanong sa BudgetPH (hal. "Kasya pa ba ang pera ko kung kakain ako sa labas ngayon?")...',
-    ai_send_btn: 'Ipadala',
-    clear_chat_btn: 'Burahin ang Chat',
-
-    // Reports
+    // Reports & Analytics
     reports_header: 'Ulat sa Kalusugang Pinansyal 📊',
-    reports_subheader: 'Tingnan ang spending trends, category breakdown, at financial discipline score.',
+    reports_subheader: 'Komprehensibong pagsusuri sa iyong mga nagastos, mood discipline, at budget health score.',
+    health_score_badge: 'BudgetPH Health Score',
+    score_healthy: '🌟 Magandang Kalagayan (Healthy)',
+    score_attention: '⚠️ Katamtaman (Needs Attention)',
+    score_risk: '🚨 Kritikal (High Risk)',
+    score_explanation: 'Ang iyong score ay batay sa fixed obligations ratio ({obligationsRatio}%), regret rate ({regretPercentage}%), at savings buffer.',
+    calculated_score_label: 'Kinalkulang Score',
+    needs_title: '✅ Needs (Kailangan)',
+    needs_desc: 'Pagkain, pamasahe, at basic bills',
+    wants_title: '🛍️ Wants (Gusto / Luho)',
+    wants_desc: 'Kape, shopping, dining out, recreation',
+    regrets_title: '🤦 Regrets (Sayang na Gastos)',
+    regrets_desc: 'Target: Panatilihing mas mababa sa 5%',
+
+    // Savings & Emergency Fund
+    savings_header: 'Ipon at Emergency Fund Tracker 🏦',
+    savings_subheader: 'Palakihin ang iyong emergency safety net at sinking funds para sa mga pangarap.',
+    add_savings_goal_btn: '+ Bagong Target na Ipon',
+    emergency_coverage_months: '{months} Buwan ng Gastusin',
+    emergency_desc: 'Batay sa iyong buwanang fixed bills na ₱{amount}. Ang ideal na emergency fund ay 3 hanggang 6 na buwan.',
+    total_saved_all_goals: 'Kabuuang Naipon sa Lahat ng Goals:',
+    auto_allocation_desc: 'Auto allocation: ₱{amount} kada sahod',
+    saved_progress_label: 'Naipon',
+
+    // AI Financial Advisor Copilot
+    ai_header: 'BudgetPH AI Advisor',
+    ai_subtitle: 'Ang iyong personal na Taglish AI financial copilot. Magtanong sa English o Tagalog!',
+    ai_welcome_msg: 'Magandang araw, {name}! 👋 Ako ang iyong **BudgetPH AI Advisor**. Handa akong tulungan ka sa iyong pang-araw-araw na gastusin, mga bills, at pagba-budget. Ano ang maitutulong ko?',
+    ai_thinking: 'Nag-iisip si BudgetPH...',
+    ai_suggestion_1: 'Pwede ba akong bumili ng ₱300 na kape today?',
+    ai_suggestion_2: 'Ano ang mga bills ko due this week?',
+    ai_suggestion_3: 'Magkano ang natitira kong budget bago mag-sahod?',
+    ai_placeholder: 'Magtanong tungkol sa iyong budget, gastusin, o bayarin...',
+    ai_cleared_msg: 'Nalinis na ang chat history! 🧹 Ano ang maitutulong ko sa iyong budget ngayon?',
+    clear_history_confirm: 'I-clear ang conversation history?',
+    clear_history_btn: 'Burahin ang Chat',
+
+    // Settings
+    settings_header: 'Mga Setting at Pamamahala ng Data ⚙️',
+    settings_subtitle: 'I-update ang iyong profile, i-export ang backup, o ulitin ang setup wizard.',
+    backup_card_desc: 'I-download ang kompletong backup ng iyong mga transactions, bills, at cycle history sa JSON format.',
+    wizard_card_desc: 'Gusto mo bang i-reset o i-reconfigure ang iyong cut-off sahod at quick bill allocations?',
 
     // Common
     cancel: 'Kanselahin',

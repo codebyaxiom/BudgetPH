@@ -1,12 +1,18 @@
-﻿import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Bot, Send, Trash2, User, Sparkles } from 'lucide-react';
 import * as api from '../services/api';
+import { useBudgetStore } from '../stores/useBudgetStore';
+import { useLanguageStore } from '../stores/useLanguageStore';
 
 export function AIChatPage() {
+  const { dashboardData } = useBudgetStore();
+  const { language, t } = useLanguageStore();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
   const messagesEndRef = useRef(null);
+
+  const userName = dashboardData?.user?.name || 'Ka-Budget';
 
   const loadHistory = async () => {
     const res = await api.fetchAIHistory();
@@ -16,7 +22,7 @@ export function AIChatPage() {
       setMessages([
         {
           role: 'assistant',
-          message: 'Magandang araw! 👋 Ako ang iyong **BudgetPH AI Advisor**. Handa akong tulungan ka sa iyong pang-araw-araw na gastusin, mga bills, at pagba-budget.'
+          message: t('ai_welcome_msg', { name: userName })
         }
       ]);
     }
@@ -24,7 +30,7 @@ export function AIChatPage() {
 
   useEffect(() => {
     loadHistory();
-  }, []);
+  }, [language]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -39,27 +45,41 @@ export function AIChatPage() {
     setIsThinking(true);
 
     try {
-      const res = await api.sendAIMessage(text);
+      const res = await api.sendAIMessage(text, language);
       if (res.success) {
         setMessages(prev => [...prev, { role: 'assistant', message: res.message }]);
       }
     } catch (err) {
-      setMessages(prev => [...prev, { role: 'assistant', message: '⚠️ Pasensya na, nagkaroon ng error sa koneksyon.' }]);
+      setMessages(prev => [
+        ...prev,
+        {
+          role: 'assistant',
+          message: language === 'tl'
+            ? '⚠️ Pasensya na, nagkaroon ng error sa koneksyon.'
+            : '⚠️ Sorry, there was an error connecting to the AI assistant.'
+        }
+      ]);
     } finally {
       setIsThinking(false);
     }
   };
 
   const handleClear = async () => {
-    if (!confirm('I-clear ang conversation history?')) return;
+    if (!confirm(t('clear_history_confirm'))) return;
     await api.clearAIHistory();
     setMessages([
       {
         role: 'assistant',
-        message: 'Nalinis na ang chat history! 🧹 Ano ang maitutulong ko sa iyong budget ngayon?'
+        message: t('ai_cleared_msg')
       }
     ]);
   };
+
+  const suggestions = [
+    t('ai_suggestion_1'),
+    t('ai_suggestion_2'),
+    t('ai_suggestion_3'),
+  ];
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-300">
@@ -70,17 +90,19 @@ export function AIChatPage() {
           </div>
           <div>
             <h1 className="text-2xl font-black text-slate-900 dark:text-slate-50 font-['Plus_Jakarta_Sans']">
-              BudgetPH AI Advisor
+              {t('ai_header')}
             </h1>
-            <p className="text-slate-500 dark:text-slate-400 text-xs">Personal Taglish financial assistant.</p>
+            <p className="text-slate-500 dark:text-slate-400 text-xs">
+              {t('ai_subtitle')}
+            </p>
           </div>
         </div>
         <button
           onClick={handleClear}
-          className="px-3 py-1.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-red-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition flex items-center gap-1.5"
+          className="px-3 py-1.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-red-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition flex items-center gap-1.5 cursor-pointer"
         >
           <Trash2 className="w-3.5 h-3.5" />
-          <span>Clear History</span>
+          <span>{t('clear_history_btn')}</span>
         </button>
       </div>
 
@@ -120,30 +142,28 @@ export function AIChatPage() {
                 <span className="w-2 h-2 rounded-full bg-green-500 animate-bounce"></span>
                 <span className="w-2 h-2 rounded-full bg-green-500 animate-bounce" style={{ animationDelay: '0.2s' }}></span>
                 <span className="w-2 h-2 rounded-full bg-green-500 animate-bounce" style={{ animationDelay: '0.4s' }}></span>
-                <span>Nag-iisip si BudgetPH...</span>
+                <span>{t('ai_thinking')}</span>
               </div>
             </div>
           )}
           <div ref={messagesEndRef} />
         </div>
 
+        {/* Suggestion Chips */}
         <div className="px-6 py-2 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2 overflow-x-auto">
           <span className="text-[11px] font-bold text-slate-400 uppercase flex-shrink-0">Suggestions:</span>
-          {[
-            'Pwede ba akong bumili ng ₱300 na kape today?',
-            'Ano ang mga bills ko due this week?',
-            'Magkano ang natitira kong budget bago mag-sahod?'
-          ].map((pill, idx) => (
+          {suggestions.map((pill, idx) => (
             <button
               key={idx}
               onClick={() => handleSend(pill)}
-              className="px-3 py-1 bg-green-50 dark:bg-green-950/60 hover:bg-green-100 dark:hover:bg-green-900/60 text-green-700 dark:text-green-300 rounded-full text-xs font-semibold whitespace-nowrap border border-green-200/60 dark:border-green-800/60 transition"
+              className="px-3 py-1 bg-green-50 dark:bg-green-950/60 hover:bg-green-100 dark:hover:bg-green-900/60 text-green-700 dark:text-green-300 rounded-full text-xs font-semibold whitespace-nowrap border border-green-200/60 dark:border-green-800/60 transition cursor-pointer"
             >
               {pill}
             </button>
           ))}
         </div>
 
+        {/* Input Bar */}
         <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
           <form
             onSubmit={(e) => {
@@ -156,15 +176,15 @@ export function AIChatPage() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Magtanong tungkol sa iyong budget, gastusin, o bayarin..."
+              placeholder={t('ai_placeholder')}
               className="flex-1 px-4 py-3 rounded-2xl border border-slate-300 dark:border-slate-700 text-sm bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-green-500 transition"
             />
             <button
               type="submit"
               disabled={!input.trim()}
-              className="px-5 py-3 rounded-2xl bg-green-600 hover:bg-green-700 text-white font-bold text-sm shadow-md transition disabled:opacity-50 flex items-center gap-1.5"
+              className="px-5 py-3 rounded-2xl bg-green-600 hover:bg-green-700 text-white font-bold text-sm shadow-md transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
             >
-              <span>Send</span>
+              <span>{t('ai_send_btn')}</span>
               <Send className="w-4 h-4" />
             </button>
           </form>

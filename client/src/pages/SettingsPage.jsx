@@ -225,7 +225,7 @@ export function SettingsPage() {
             <span>Data Export & Backup</span>
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            I-download ang kompletong backup ng iyong mga transactions, bills, at cycle history sa JSON format.
+            {t('backup_card_desc')}
           </p>
         </div>
         <button
@@ -245,7 +245,7 @@ export function SettingsPage() {
             <span>Fast-Track Setup Wizard</span>
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Gusto mo bang i-reset o i-reconfigure ang iyong cut-off sahod at quick bill allocations?
+            {t('wizard_card_desc')}
           </p>
         </div>
         <button
