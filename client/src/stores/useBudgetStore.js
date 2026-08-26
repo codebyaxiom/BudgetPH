@@ -28,9 +28,10 @@ export const useBudgetStore = create((set, get) => ({
   loadDashboard: async () => {
     set({ isLoadingDashboard: true });
     try {
+      const currentLang = localStorage.getItem('budgetph_lang') || 'en';
       const [dash, alerts] = await Promise.all([
         api.fetchDashboard(),
-        api.fetchProactiveAlerts()
+        api.fetchProactiveAlerts(currentLang)
       ]);
       set({
         dashboardData: dash.success ? dash : null,

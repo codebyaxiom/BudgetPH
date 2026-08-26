@@ -1,9 +1,11 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { X, DollarSign, CheckCircle } from 'lucide-react';
 import { useBudgetStore } from '../../stores/useBudgetStore';
+import { useLanguageStore } from '../../stores/useLanguageStore';
 
 export function LogExpenseModal() {
   const { isExpenseModalOpen, closeExpenseModal, logQuickExpense } = useBudgetStore();
+  const { language, t } = useLanguageStore();
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('food');
@@ -47,11 +49,15 @@ export function LogExpenseModal() {
               <DollarSign className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-50 font-['Plus_Jakarta_Sans']">Mag-log ng Gastos</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">I-record ang pang-araw-araw na bayarin</p>
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-50 font-['Plus_Jakarta_Sans']">
+                {t('log_expense')}
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {language === 'tl' ? 'I-record ang pang-araw-araw na bayarin' : 'Record daily transaction or purchase'}
+              </p>
             </div>
           </div>
-          <button onClick={closeExpenseModal} className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-800">
+          <button onClick={closeExpenseModal} className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-800 cursor-pointer">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -59,13 +65,15 @@ export function LogExpenseModal() {
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">Deskripsyon</label>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+              {t('description_label')}
+            </label>
             <input
               type="text"
               required
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="e.g. Tanghalian sa karinderya, Grab, Kape"
+              placeholder={t('description_placeholder')}
               className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
               autoFocus
             />
@@ -73,7 +81,9 @@ export function LogExpenseModal() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">Halaga (₱)</label>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                {t('amount_label')}
+              </label>
               <input
                 type="number"
                 step="0.01"
@@ -86,25 +96,29 @@ export function LogExpenseModal() {
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">Kategorya</label>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                {t('category_label')}
+              </label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
               >
-                <option value="food">🍲 Pagkain</option>
-                <option value="transport">🚗 Pamasahe / Grab</option>
-                <option value="groceries">🛒 Palengke / Grocery</option>
-                <option value="utilities">💡 Utilities / Load</option>
-                <option value="medical">💊 Gamot / Health</option>
-                <option value="entertainment">🎮 Luho / Leisure</option>
-                <option value="other">📦 Iba pa</option>
+                <option value="food">🍲 {language === 'tl' ? 'Pagkain' : 'Food & Dining'}</option>
+                <option value="transport">🚗 {language === 'tl' ? 'Pamasahe / Grab' : 'Transportation'}</option>
+                <option value="groceries">🛒 {language === 'tl' ? 'Palengke / Grocery' : 'Groceries'}</option>
+                <option value="utilities">💡 {language === 'tl' ? 'Utilities / Load' : 'Utilities & Bills'}</option>
+                <option value="medical">💊 {language === 'tl' ? 'Gamot / Health' : 'Health & Medicine'}</option>
+                <option value="entertainment">🎮 {language === 'tl' ? 'Luho / Leisure' : 'Leisure & Wants'}</option>
+                <option value="other">📦 {language === 'tl' ? 'Iba pa' : 'Other'}</option>
               </select>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">Gastos Mood / Tag</label>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+              {t('mood_label')}
+            </label>
             <div className="grid grid-cols-3 gap-2">
               {[
                 { id: 'need', label: '✅ Need', color: 'border-green-500 bg-green-50 dark:bg-green-950/40 text-green-800 dark:text-green-300' },
@@ -115,7 +129,7 @@ export function LogExpenseModal() {
                   type="button"
                   key={m.id}
                   onClick={() => setMood(m.id)}
-                  className={`p-2 rounded-xl text-xs font-semibold border text-center transition-all ${
+                  className={`p-2 rounded-xl text-xs font-semibold border text-center transition-all cursor-pointer ${
                     mood === m.id ? `${m.color} ring-2 ring-offset-1 ring-slate-400 dark:ring-slate-600` : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
                   }`}
                 >
@@ -129,17 +143,17 @@ export function LogExpenseModal() {
             <button
               type="button"
               onClick={closeExpenseModal}
-              className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800"
+              className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
             >
-              Cancel
+              {t('cancel')}
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white text-xs font-bold shadow-md transition-all flex items-center gap-1.5"
+              className="px-5 py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white text-xs font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               <CheckCircle className="w-4 h-4" />
-              <span>{isSubmitting ? 'Saving...' : 'Save Gastos'}</span>
+              <span>{isSubmitting ? t('loading') : t('save_expense_btn')}</span>
             </button>
           </div>
 

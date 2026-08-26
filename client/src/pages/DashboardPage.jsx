@@ -106,13 +106,13 @@ export function DashboardPage({ setActiveTab }) {
           <div className="flex-1">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-emerald-950 dark:text-emerald-300 font-['Plus_Jakarta_Sans']">
-                AI Budget Insight
+                {t('proactive_insights')}
               </h3>
               <button
                 onClick={() => setActiveTab('ai')}
                 className="text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:text-emerald-900 dark:hover:text-emerald-200 flex items-center gap-1"
               >
-                <span>Tingnan ang Chat</span>
+                <span>{t('view_chat')}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -135,9 +135,9 @@ export function DashboardPage({ setActiveTab }) {
             <DollarSign className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Sahod / Income</p>
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{t('stat_income')}</p>
             <p className="text-xl font-bold text-slate-900 dark:text-slate-50">₱{Number(d.total_income || 0).toLocaleString()}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Active cycle allocation</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{t('stat_income_sub')}</p>
           </div>
         </div>
 
@@ -146,9 +146,11 @@ export function DashboardPage({ setActiveTab }) {
             <Receipt className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Fixed Obligations</p>
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{t('stat_obligations')}</p>
             <p className="text-xl font-bold text-slate-900 dark:text-slate-50">₱{Number(d.obligations_sum || 0).toLocaleString()}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{d.paid_obligations || 0} paid · {d.pending_obligations || 0} pending</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              {t('stat_obligations_sub', { paid: d.paid_obligations || 0, pending: d.pending_obligations || 0 })}
+            </p>
           </div>
         </div>
 
@@ -157,9 +159,9 @@ export function DashboardPage({ setActiveTab }) {
             <Clock className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Araw Bago Sahod</p>
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{t('stat_days_until_payday')}</p>
             <p className="text-xl font-bold text-amber-600 dark:text-amber-400">{d.days_until_payday || 0} days</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Pacing for next cycle</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{t('stat_days_sub')}</p>
           </div>
         </div>
 
@@ -168,9 +170,9 @@ export function DashboardPage({ setActiveTab }) {
             <TrendingUp className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Spendable Balance</p>
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{t('stat_spendable')}</p>
             <p className="text-xl font-bold text-purple-700 dark:text-purple-400">₱{Number(d.spendable_remaining || 0).toLocaleString()}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Natitira pang budget</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{t('stat_spendable_sub')}</p>
           </div>
         </div>
 
@@ -183,10 +185,10 @@ export function DashboardPage({ setActiveTab }) {
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-bold text-slate-900 dark:text-slate-50 font-['Plus_Jakarta_Sans']">
-              📋 Upcoming Bills This Month
+              {t('upcoming_bills_title')}
             </h3>
             <button onClick={() => setActiveTab('obligations')} className="text-xs font-bold text-green-700 dark:text-green-400 hover:text-green-800">
-              Manage All
+              {t('manage_all')}
             </button>
           </div>
 
@@ -197,25 +199,25 @@ export function DashboardPage({ setActiveTab }) {
                   <div>
                     <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{b.name}</p>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Due every {b.due_day}th of the month · ₱{Number(b.amount).toLocaleString()}
+                      {t('due_every_day', { day: b.due_day, amount: Number(b.amount).toLocaleString() })}
                     </p>
                   </div>
                   {b.is_paid ? (
                     <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 flex items-center gap-1 border border-blue-200 dark:border-blue-800">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Paid
+                      <CheckCircle2 className="w-3.5 h-3.5" /> {t('paid_badge')}
                     </span>
                   ) : (
                     <button
                       onClick={() => handleMarkPaid(b.id)}
-                      className="px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-bold shadow-sm transition"
+                      className="px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-bold shadow-sm transition cursor-pointer"
                     >
-                      Mark Paid
+                      {t('mark_paid')}
                     </button>
                   )}
                 </div>
               ))
             ) : (
-              <p className="text-xs text-slate-400 py-6 text-center">Walang nakalistang bills.</p>
+              <p className="text-xs text-slate-400 py-6 text-center">{t('no_upcoming_bills')}</p>
             )}
           </div>
         </div>
@@ -224,10 +226,10 @@ export function DashboardPage({ setActiveTab }) {
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-bold text-slate-900 dark:text-slate-50 font-['Plus_Jakarta_Sans']">
-              💸 Kamakailang Gastos
+              {t('recent_expenses')}
             </h3>
             <button onClick={() => setActiveTab('daily')} className="text-xs font-bold text-green-700 dark:text-green-400 hover:text-green-800">
-              Daily View
+              {t('daily_view')}
             </button>
           </div>
 
@@ -255,7 +257,7 @@ export function DashboardPage({ setActiveTab }) {
                 </div>
               ))
             ) : (
-              <p className="text-xs text-slate-400 py-6 text-center">Wala pang na-record na gastos.</p>
+              <p className="text-xs text-slate-400 py-6 text-center">{t('no_expenses_logged')}</p>
             )}
           </div>
         </div>

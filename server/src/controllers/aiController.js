@@ -1,4 +1,4 @@
-﻿import pool from '../config/db.js';
+import pool from '../config/db.js';
 import axios from 'axios';
 import { getUserFinancialSnapshot } from '../utils/calculator.js';
 
@@ -28,6 +28,7 @@ export async function clearHistory(req, res) {
 export async function getProactiveAlerts(req, res) {
   try {
     const userId = 1;
+    const lang = req.query.lang || 'en';
     const snapshot = await getUserFinancialSnapshot(userId);
     const alerts = [];
     const today = new Date().getDate();
@@ -40,15 +41,20 @@ export async function getProactiveAlerts(req, res) {
           if (diff < 0) {
             alerts.push({
               type: 'danger',
-              title: 'Overdue Bill Alert!',
-              message: `Ang **${b.name}** (₱${Number(b.amount).toLocaleString()}) ay due noong ika-${b.due_day} at hindi pa bayad.`
+              title: lang === 'tl' ? 'Overdue Bill Alert!' : 'Overdue Bill Alert!',
+              message: lang === 'tl'
+                ? `Ang **${b.name}** (₱${Number(b.amount).toLocaleString()}) ay due noong ika-${b.due_day} at hindi pa bayad.`
+                : `**${b.name}** (₱${Number(b.amount).toLocaleString()}) was due on the ${b.due_day}th and is still unpaid.`
             });
           } else if (diff <= 3) {
-            const dayText = diff === 0 ? 'ngayong araw' : (diff === 1 ? 'bukas' : `sa loob ng ${diff} araw`);
+            const dayTextTl = diff === 0 ? 'ngayong araw' : (diff === 1 ? 'bukas' : `sa loob ng ${diff} araw`);
+            const dayTextEn = diff === 0 ? 'today' : (diff === 1 ? 'tomorrow' : `in ${diff} days`);
             alerts.push({
               type: 'warning',
-              title: 'Bill Due Soon',
-              message: `Due ang **${b.name}** (₱${Number(b.amount).toLocaleString()}) ${dayText}.`
+              title: lang === 'tl' ? 'Parating na Bayarin' : 'Bill Due Soon',
+              message: lang === 'tl'
+                ? `Due ang **${b.name}** (₱${Number(b.amount).toLocaleString()}) ${dayTextTl}.`
+                : `**${b.name}** (₱${Number(b.amount).toLocaleString()}) is due ${dayTextEn}.`
             });
           }
         }
@@ -59,14 +65,18 @@ export async function getProactiveAlerts(req, res) {
     if (snapshot.remaining_today < 0) {
       alerts.push({
         type: 'danger',
-        title: 'Over Daily Budget!',
-        message: `Na-overspend ka ng **₱${Math.abs(snapshot.remaining_today).toLocaleString()}** ngayong araw. Magtipid bukas para makabawi!`
+        title: lang === 'tl' ? 'Over Daily Budget!' : 'Over Daily Budget!',
+        message: lang === 'tl'
+          ? `Na-overspend ka ng **₱${Math.abs(snapshot.remaining_today).toLocaleString()}** ngayong araw. Magtipid bukas para makabawi!`
+          : `You have exceeded today's budget by **₱${Math.abs(snapshot.remaining_today).toLocaleString()}**. Consider trimming tomorrow's spending!`
       });
     } else if (snapshot.daily_budget > 0 && snapshot.remaining_today >= 0) {
       alerts.push({
         type: 'success',
-        title: 'On Track Today',
-        message: `May **₱${snapshot.remaining_today.toLocaleString()}** ka pang spendable budget ngayong araw.`
+        title: lang === 'tl' ? 'On Track Today' : 'On Track Today',
+        message: lang === 'tl'
+          ? `May **₱${snapshot.remaining_today.toLocaleString()}** ka pang spendable budget ngayong araw.`
+          : `You have **₱${snapshot.remaining_today.toLocaleString()}** remaining in your safe daily budget today.`
       });
     }
 
