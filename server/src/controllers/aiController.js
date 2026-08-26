@@ -89,7 +89,7 @@ export async function getProactiveAlerts(req, res) {
 export async function sendMessage(req, res) {
   try {
     const userId = 1;
-    const { message, lang = 'en' } = req.body;
+    const { message, lang = 'en', mode = 'auto' } = req.body;
     if (!message) return res.status(400).json({ success: false, error: 'Message required' });
 
     // Save user message
@@ -97,11 +97,13 @@ export async function sendMessage(req, res) {
 
     const snapshot = await getUserFinancialSnapshot(userId);
 
-    // Call Groq API or Fallback
+    // Determine whether to call Groq or Local
     const apiKey = process.env.GROQ_API_KEY;
     let aiResponse = '';
+    let usedEngine = 'local';
+    let usedModel = 'BudgetPH Math Engine (Local)';
 
-    if (apiKey && apiKey.trim()) {
+    if (mode !== 'local' && apiKey && apiKey.trim()) {
       const [recentRows] = await pool.query(
         'SELECT role, message FROM ai_conversations WHERE user_id = ? ORDER BY id DESC LIMIT 6',
         [userId]
@@ -145,7 +147,12 @@ Always answer with clarity, warmth, and exact arithmetic based on these numbers.
             timeout: 15000
           }
         );
-        aiResponse = groqRes.data?.choices?.[0]?.message?.content || (lang === 'tl' ? 'Pasensya na, walang tugon mula sa AI.' : 'Sorry, no response from AI.');
+        const groqText = groqRes.data?.choices?.[0]?.message?.content;
+        if (groqText) {
+          aiResponse = groqText;
+          usedEngine = 'groq';
+          usedModel = modelName;
+        }
       } catch (groqErr) {
         console.error('Groq API call error:', groqErr.response?.data || groqErr.message);
         // Fallback to local intelligent rules below if Groq throws
@@ -153,6 +160,8 @@ Always answer with clarity, warmth, and exact arithmetic based on these numbers.
     }
 
     if (!aiResponse) {
+      usedEngine = 'local';
+      usedModel = 'BudgetPH Math Engine (Local)';
       // Local rule-based advisor
       const msg = message.toLowerCase();
       const isTagalogInput = msg.includes('pwede') || msg.includes('bilhin') || msg.includes('bumili') || msg.includes('gastos') || msg.includes('magkano') || lang === 'tl';
@@ -190,7 +199,12 @@ Always answer with clarity, warmth, and exact arithmetic based on these numbers.
     // Save assistant response
     await pool.query('INSERT INTO ai_conversations (user_id, role, message) VALUES (?, ?, ?)', [userId, 'assistant', aiResponse]);
 
-    res.json({ success: true, message: aiResponse });
+    res.json({
+      success: true,
+      message: aiResponse,
+      engine: usedEngine,
+      model: usedModel
+    });
   } catch (error) {
     console.error('AI chat error:', error);
     res.status(500).json({ success: false, error: error.message });

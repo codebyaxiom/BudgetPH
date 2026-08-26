@@ -75,5 +75,5 @@ export const exportData = () => request('/settings/export');
 // AI Chat
 export const fetchAIHistory = () => request('/ai/history');
 export const fetchProactiveAlerts = (lang = 'en') => request(`/ai/alerts?lang=${lang}`);
-export const sendAIMessage = (message, lang = 'en') => request('/ai/message', { method: 'POST', body: { message, lang } });
+export const sendAIMessage = (message, lang = 'en', mode = 'auto') => request('/ai/message', { method: 'POST', body: { message, lang, mode } });
 export const clearAIHistory = () => request('/ai/history', { method: 'DELETE' });
