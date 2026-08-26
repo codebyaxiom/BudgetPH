@@ -1,0 +1,74 @@
+﻿const API_BASE = '/api';
+
+async function request(endpoint, options = {}) {
+  const url = `${API_BASE}${endpoint}`;
+  const config = {
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+    ...options,
+  };
+
+  if (config.body && typeof config.body === 'object') {
+    config.body = JSON.stringify(config.body);
+  }
+
+  const res = await fetch(url, config);
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || `HTTP error! status: ${res.status}`);
+  }
+  return res.json();
+}
+
+// Dashboard
+export const fetchDashboard = () => request('/dashboard');
+
+// Payday
+export const fetchPaydaySetup = () => request('/payday/setup');
+export const simulatePayday = (payload) => request('/payday/simulate', { method: 'POST', body: payload });
+export const fetchPaydayCycles = () => request('/payday/cycles');
+
+// Expenses
+export const fetchDailyData = () => request('/expenses/daily');
+export const fetchAllExpenses = (params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  return request(`/expenses/all${query ? `?${query}` : ''}`);
+};
+export const logExpense = (payload) => request('/expenses', { method: 'POST', body: payload });
+export const deleteExpense = (id) => request(`/expenses/${id}`, { method: 'DELETE' });
+
+// Obligations
+export const fetchObligations = () => request('/obligations');
+export const saveObligation = (payload) => request('/obligations', { method: 'POST', body: payload });
+export const markObligationPaid = (payload) => request('/obligations/pay', { method: 'POST', body: payload });
+export const unmarkObligationPaid = (id) => request('/obligations/unpay', { method: 'POST', body: { obligation_id: id } });
+export const deleteObligation = (id) => request(`/obligations/${id}`, { method: 'DELETE' });
+
+// Allowances
+export const fetchAllowances = () => request('/allowances');
+export const addFamilyMember = (payload) => request('/allowances/member', { method: 'POST', body: payload });
+export const deleteFamilyMember = (id) => request(`/allowances/member/${id}`, { method: 'DELETE' });
+export const saveAllowance = (payload) => request('/allowances/save', { method: 'POST', body: payload });
+export const deleteAllowance = (id) => request(`/allowances/${id}`, { method: 'DELETE' });
+
+// Savings & Goals
+export const fetchSavings = () => request('/savings');
+export const createSavingsGoal = (payload) => request('/savings', { method: 'POST', body: payload });
+export const depositToSavings = (payload) => request('/savings/deposit', { method: 'POST', body: payload });
+export const deleteSavingsGoal = (id) => request(`/savings/${id}`, { method: 'DELETE' });
+
+// Reports & Analytics
+export const fetchAnalytics = () => request('/reports/analytics');
+
+// Settings & Profile
+export const fetchSettings = () => request('/settings');
+export const updateProfile = (payload) => request('/settings/profile', { method: 'POST', body: payload });
+export const exportData = () => request('/settings/export');
+
+// AI Chat
+export const fetchAIHistory = () => request('/ai/history');
+export const fetchProactiveAlerts = () => request('/ai/alerts');
+export const sendAIMessage = (message) => request('/ai/message', { method: 'POST', body: { message } });
+export const clearAIHistory = () => request('/ai/history', { method: 'DELETE' });

@@ -1,0 +1,16 @@
+{
+  "name": "budgetph-workspace",
+  "version": "2.0.0",
+  "private": true,
+  "description": "BudgetPH Full-Stack App (React 19 + Express)",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "build": "cd client && npm run build",
+    "start": "cd server && npm start"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.4"
+  }
+}
