@@ -41,6 +41,7 @@ router.delete('/obligations/:id', obligations.deleteObligation);
 // Allowances
 router.get('/allowances', allowances.getAllowances);
 router.post('/allowances/member', allowances.addFamilyMember);
+router.put('/allowances/member/:id', allowances.updateFamilyMember);
 router.delete('/allowances/member/:id', allowances.deleteFamilyMember);
 router.post('/allowances/save', allowances.saveAllowance);
 router.delete('/allowances/:id', allowances.deleteAllowance);

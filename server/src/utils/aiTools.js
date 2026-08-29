@@ -226,6 +226,23 @@ export const aiToolDefinitions = [
   {
     type: 'function',
     function: {
+      name: 'delete_family_member',
+      description: 'Deletes or removes a family member and their associated allowance from the budget (e.g. "Alisin si Lucas", "Delete member Farzam").',
+      parameters: {
+        type: 'object',
+        properties: {
+          name: {
+            type: 'string',
+            description: 'Name or keyword of the family member to delete/remove'
+          }
+        },
+        required: ['name']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
       name: 'add_to_wishlist',
       description: 'Saves a non-essential want, impulse purchase, or item to the Wants/Wishlist delay buffer to review on payday.',
       parameters: {
@@ -677,6 +694,52 @@ export async function executeAiTool(name, args, userId = 1) {
             old_name: target.name,
             new_name: newName,
             role: newRole || target.role
+          }
+        };
+      }
+
+      case 'delete_family_member': {
+        const rawName = (args.name || '').toLowerCase().trim();
+        const [members] = await pool.query('SELECT * FROM family_members WHERE user_id = ?', [userId]);
+
+        if (members.length === 0) {
+          return {
+            success: false,
+            action_type: 'delete_family_member',
+            summary: 'Walang nakarehistrong family member sa kasalukuyan.'
+          };
+        }
+
+        const terms = rawName.split(/[\s()\-]+/).filter(Boolean);
+        let target = members.find(m => {
+          const mLow = m.name.toLowerCase();
+          return mLow === rawName || mLow.includes(rawName) || rawName.includes(mLow) || terms.some(t => mLow.includes(t));
+        });
+
+        if (!target && members.length === 1) {
+          target = members[0];
+        }
+
+        if (!target) {
+          return {
+            success: false,
+            action_type: 'delete_family_member',
+            summary: `Hindi mahanap ang family member na "${args.name}".`
+          };
+        }
+
+        // Delete associated allowances first
+        await pool.query('DELETE FROM allowances WHERE family_member_id = ? AND user_id = ?', [target.id, userId]);
+        // Delete member
+        await pool.query('DELETE FROM family_members WHERE id = ? AND user_id = ?', [target.id, userId]);
+
+        return {
+          success: true,
+          action_type: 'delete_family_member',
+          summary: `Matagumpay na tinanggal si "${target.name}" at ang kanyang allowance sa iyong budget.`,
+          data: {
+            deleted_member_id: target.id,
+            name: target.name
           }
         };
       }

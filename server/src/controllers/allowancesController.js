@@ -1,4 +1,4 @@
-﻿import pool from '../config/db.js';
+import pool from '../config/db.js';
 import { getActivePaydayCycle } from '../utils/calculator.js';
 
 export async function getAllowances(req, res) {
@@ -82,10 +82,28 @@ export async function addFamilyMember(req, res) {
   }
 }
 
+export async function updateFamilyMember(req, res) {
+  try {
+    const userId = 1;
+    const { id } = req.params;
+    const { name, role } = req.body;
+    if (!name) return res.status(400).json({ success: false, error: 'Name required' });
+
+    await pool.query(
+      'UPDATE family_members SET name = ?, role = COALESCE(?, role) WHERE id = ? AND user_id = ?',
+      [name, role || null, id, userId]
+    );
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+}
+
 export async function deleteFamilyMember(req, res) {
   try {
     const userId = 1;
     const { id } = req.params;
+    await pool.query('DELETE FROM allowances WHERE family_member_id = ? AND user_id = ?', [id, userId]);
     await pool.query('DELETE FROM family_members WHERE id = ? AND user_id = ?', [id, userId]);
     res.json({ success: true });
   } catch (error) {

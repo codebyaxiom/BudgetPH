@@ -54,6 +54,7 @@ export const deleteObligation = (id) => request(`/obligations/${id}`, { method: 
 // Allowances
 export const fetchAllowances = () => request('/allowances');
 export const addFamilyMember = (payload) => request('/allowances/member', { method: 'POST', body: payload });
+export const updateFamilyMember = (id, payload) => request(`/allowances/member/${id}`, { method: 'PUT', body: payload });
 export const deleteFamilyMember = (id) => request(`/allowances/member/${id}`, { method: 'DELETE' });
 export const saveAllowance = (payload) => request('/allowances/save', { method: 'POST', body: payload });
 export const deleteAllowance = (id) => request(`/allowances/${id}`, { method: 'DELETE' });
