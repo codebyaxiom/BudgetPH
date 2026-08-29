@@ -212,6 +212,7 @@ When you execute a tool, warmly confirm the exact details in your response.`;
       try {
         const primaryModel = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
         const modelList = [primaryModel, 'openai/gpt-oss-20b', 'qwen/qwen3.6-27b', 'groq/compound'];
+        let successfulModel = '';
         
         for (const mName of modelList) {
           try {
