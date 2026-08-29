@@ -12,6 +12,7 @@ export async function getUserFinancialSnapshot(userId = 1) {
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
 
+  // 1. Obligations & Bills
   const [obsList] = await pool.query(
     `SELECT o.id, o.name, o.amount, o.category, o.due_day,
             EXISTS (
@@ -31,14 +32,39 @@ export async function getUserFinancialSnapshot(userId = 1) {
   const totalUnpaidAmount = unpaidBills.reduce((acc, o) => acc + parseFloat(o.amount), 0);
   const totalPaidAmount = paidBills.reduce((acc, o) => acc + parseFloat(o.amount), 0);
 
-  const [savings] = await pool.query(
-    'SELECT SUM(current_amount) as total_savings FROM savings_goals WHERE user_id = ? AND is_active = 1',
+  // 2. Savings & Goals
+  const [savingsGoals] = await pool.query(
+    'SELECT id, name, target_amount, current_amount FROM savings_goals WHERE user_id = ? AND is_active = 1',
     [userId]
   );
+  const totalSavings = savingsGoals.reduce((acc, g) => acc + parseFloat(g.current_amount || 0), 0);
+
+  // 3. Family Allowances
+  const [allowanceRows] = await pool.query(
+    `SELECT a.id, fm.name, fm.role, a.amount, a.period, a.notes
+     FROM allowances a
+     JOIN family_members fm ON a.family_member_id = fm.id
+     WHERE a.user_id = ?`,
+    [userId]
+  );
+
+  // 4. Wants & Wishlist
   const [wishlistRows] = await pool.query(
-    "SELECT name, estimated_amount, priority FROM wishlist_items WHERE user_id = ? AND status = 'pending' ORDER BY FIELD(priority, 'high', 'medium', 'low')",
+    "SELECT id, name, estimated_amount, priority FROM wishlist_items WHERE user_id = ? AND status = 'pending' ORDER BY FIELD(priority, 'high', 'medium', 'low')",
     [userId]
   );
+  const totalWishlistCost = wishlistRows.reduce((acc, w) => acc + parseFloat(w.estimated_amount || 0), 0);
+
+  // 5. Today's Logged Expenses Breakdown
+  const [todayExpRows] = await pool.query(
+    `SELECT id, description, amount, category, mood, expense_date
+     FROM expenses
+     WHERE user_id = ? AND expense_date = CURRENT_DATE()
+     ORDER BY id DESC`,
+    [userId]
+  );
+
+  // 6. User and Income Profile
   const [userRows] = await pool.query('SELECT name FROM users WHERE id = ?', [userId]);
   const [incomeRows] = await pool.query('SELECT frequency, payday_1, payday_2 FROM income_sources WHERE user_id = ? AND is_active = 1 LIMIT 1', [userId]);
 
@@ -61,10 +87,24 @@ export async function getUserFinancialSnapshot(userId = 1) {
     paid_bills_list: paidBills.map(o => `${o.name} (₱${Number(o.amount).toLocaleString()}) [PAID ✅]`).join(', ') || 'None yet',
 
     all_registered_bills_summary: obsList.map(o => `${o.name} (₱${Number(o.amount).toLocaleString()} [${o.is_paid ? 'PAID ✅' : 'UNPAID ⏳'}])`).join(', '),
-    
+
+    // Savings Goals
+    total_savings: totalSavings,
+    savings_goals_summary: savingsGoals.map(g => `${g.name}: ₱${Number(g.current_amount).toLocaleString()} / ₱${Number(g.target_amount).toLocaleString()}`).join(', ') || 'No active goals',
+
+    // Family Allowances
+    allowances_count: allowanceRows.length,
+    allowances_summary: allowanceRows.map(a => `${a.name} (${a.role}): ₱${Number(a.amount).toLocaleString()} / ${a.period}`).join(', ') || 'No family allowances registered',
+
+    // Wants & Wishlist
     pending_wishlist_count: wishlistRows.length,
+    total_wishlist_cost: totalWishlistCost,
     wishlist_summary: wishlistRows.map(w => `${w.name} (₱${Number(w.estimated_amount).toLocaleString()} [${w.priority}])`).join(', ') || 'No saved wants yet',
-    total_savings: savings[0]?.total_savings || 0,
+    
+    // Today's Expenses Breakdown
+    today_expenses_count: todayExpRows.length,
+    today_expenses_breakdown: todayExpRows.map(e => `${e.description} (₱${Number(e.amount).toLocaleString()} [${e.category}/${e.mood}])`).join(', ') || 'None yet today',
+
     cycle_payday_date: cycle?.payday_date,
     cycle_next_payday: cycle?.next_payday_date
   };
@@ -219,7 +259,7 @@ Live Financial Context:
 - Pay Frequency: ${snapshot.pay_schedule}
 - Safe Daily Budget: ₱${snapshot.daily_budget}
 - Remaining Today: ₱${snapshot.remaining_today}
-- Spent Today: ₱${snapshot.spent_today}
+- Spent Today: ₱${snapshot.spent_today} (Breakdown: ${snapshot.today_expenses_breakdown})
 - Days until Next Payday: ${snapshot.days_until_payday} days
 - Total Cycle Spendable Remaining: ₱${snapshot.spendable_remaining}
 
@@ -230,8 +270,15 @@ BILLS & OBLIGATIONS STATUS:
   ${snapshot.paid_bills_list}
 - All Registered Bills Status: ${snapshot.all_registered_bills_summary}
 
-- Saved Wants in Wishlist (${snapshot.pending_wishlist_count}): ${snapshot.wishlist_summary}
-- Current Savings: ₱${snapshot.total_savings}
+FAMILY ALLOWANCES (${snapshot.allowances_count}):
+- ${snapshot.allowances_summary}
+
+SAVINGS & EMERGENCY GOALS:
+- Total Savings: ₱${Number(snapshot.total_savings).toLocaleString()}
+- Goals Breakdown: ${snapshot.savings_goals_summary}
+
+WANTS & WISHLIST BUFFER (${snapshot.pending_wishlist_count} items, Total: ₱${Number(snapshot.total_wishlist_cost).toLocaleString()}):
+- ${snapshot.wishlist_summary}
 
 When you execute a tool, warmly confirm the exact details in your response.`;
 
