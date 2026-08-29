@@ -15,7 +15,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import { useBudgetStore } from './stores/useBudgetStore';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('ai');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
@@ -51,6 +51,7 @@ export default function App() {
         <Header activeTab={activeTab} onOpenMobileMenu={() => setIsMobileSidebarOpen(true)} />
         
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-8">
+          {activeTab === 'ai' && <AIChatPage setActiveTab={setActiveTab} />}
           {activeTab === 'dashboard' && <DashboardPage setActiveTab={setActiveTab} />}
           {activeTab === 'daily' && <DailyPage />}
           {activeTab === 'reports' && <ReportsPage />}
@@ -58,7 +59,6 @@ export default function App() {
           {activeTab === 'obligations' && <ObligationsPage />}
           {activeTab === 'allowances' && <AllowancesPage />}
           {activeTab === 'savings' && <SavingsPage />}
-          {activeTab === 'ai' && <AIChatPage />}
           {activeTab === 'settings' && <SettingsPage />}
         </main>
 

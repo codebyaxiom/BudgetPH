@@ -10,7 +10,13 @@ export function Sidebar({ activeTab, setActiveTab, isCollapsed, setIsCollapsed, 
 
   const navGroups = [
     {
-      title: 'Overview',
+      title: 'AI Command Center',
+      items: [
+        { id: 'ai', label: t('ai_advisor'), icon: Bot, isAI: true },
+      ]
+    },
+    {
+      title: 'Overview & Visuals',
       items: [
         { id: 'dashboard', label: t('dashboard'), icon: LayoutDashboard },
         { id: 'daily', label: t('daily'), icon: Wallet },
@@ -27,9 +33,8 @@ export function Sidebar({ activeTab, setActiveTab, isCollapsed, setIsCollapsed, 
       ]
     },
     {
-      title: 'Intelligence & Settings',
+      title: 'Settings',
       items: [
-        { id: 'ai', label: t('ai_advisor'), icon: Bot, isAI: true },
         { id: 'settings', label: t('settings'), icon: Settings },
       ]
     }
