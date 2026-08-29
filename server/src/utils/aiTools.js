@@ -174,7 +174,7 @@ export const aiToolDefinitions = [
         properties: {
           name: {
             type: 'string',
-            description: 'Name of the family member or dependent (e.g. "Grade 2 Kid", "Bunso", "Nanay")'
+            description: 'Real name or Filipino familial nickname of the dependent (e.g. "Lucas", "Sofia", "Bunso", "Panganay", "Nanay", "Tatay")'
           },
           role: {
             type: 'string',
@@ -191,10 +191,35 @@ export const aiToolDefinitions = [
           },
           notes: {
             type: 'string',
-            description: 'Purpose or details (e.g. "Baon and pamasahe Mon-Fri")'
+            description: 'Purpose or details (e.g. "School baon Mon-Fri")'
           }
         },
         required: ['name', 'amount', 'period']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'update_family_member_name',
+      description: 'Renames or updates an existing family member or dependent (e.g. changing "Grade 2 Kid" to a real name like "Lucas", "Sofia", or "Bunso").',
+      parameters: {
+        type: 'object',
+        properties: {
+          current_name: {
+            type: 'string',
+            description: 'Current name or keyword of the family member to find (e.g. "Grade 2 Kid", "Bunso")'
+          },
+          new_name: {
+            type: 'string',
+            description: 'The new preferred real name or nickname (e.g. "Lucas", "Sofia", "Bunso", "Kuya Miggy")'
+          },
+          role: {
+            type: 'string',
+            description: 'Optional updated relationship/role (e.g. "child", "spouse", "parent")'
+          }
+        },
+        required: ['current_name', 'new_name']
       }
     }
   },
@@ -601,6 +626,57 @@ export async function executeAiTool(name, args, userId = 1) {
             amount: numAmt,
             period,
             notes
+          }
+        };
+      }
+
+      case 'update_family_member_name': {
+        const rawCurrent = (args.current_name || '').toLowerCase().trim();
+        const newName = (args.new_name || '').trim();
+        const newRole = args.role;
+
+        const [members] = await pool.query('SELECT * FROM family_members WHERE user_id = ?', [userId]);
+        if (members.length === 0) {
+          return {
+            success: false,
+            action_type: 'update_family_member_name',
+            summary: 'Walang nakarehistrong family member sa kasalukuyan.'
+          };
+        }
+
+        const terms = rawCurrent.split(/[\s()\-]+/).filter(Boolean);
+        let target = members.find(m => {
+          const mLow = m.name.toLowerCase();
+          return mLow === rawCurrent || mLow.includes(rawCurrent) || rawCurrent.includes(mLow) || terms.some(t => mLow.includes(t));
+        });
+
+        // Fallback if only 1 family member exists
+        if (!target && members.length === 1) {
+          target = members[0];
+        }
+
+        if (!target) {
+          return {
+            success: false,
+            action_type: 'update_family_member_name',
+            summary: `Hindi mahanap ang family member na "${args.current_name}".`
+          };
+        }
+
+        await pool.query(
+          'UPDATE family_members SET name = ?, role = COALESCE(?, role) WHERE id = ? AND user_id = ?',
+          [newName, newRole || null, target.id, userId]
+        );
+
+        return {
+          success: true,
+          action_type: 'update_family_member_name',
+          summary: `Na-update na ang pangalan ni "${target.name}" sa "${newName}"!`,
+          data: {
+            member_id: target.id,
+            old_name: target.name,
+            new_name: newName,
+            role: newRole || target.role
           }
         };
       }

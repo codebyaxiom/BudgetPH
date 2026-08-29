@@ -186,3 +186,16 @@ erDiagram
 
 fs.writeFileSync(vaultSpecPath, specContent, 'utf8');
 console.log('✅ Successfully written BudgetPH master living spec to Obsidian Vault.');
+
+const logPath = 'D:\\Axiom_Vault\\Vault Changelog.md';
+const entry = `
+### Session: BudgetPH Master Living Spec Synchronization (2026-08-29)
+- **Updated:** \`01 Projects/BudgetPH.md\`
+- **Details:** Fully synchronized system architecture, 6 Scoped AI Topic Channels, Wants & Wishlist delay buffer, RLHF/SFT model training pipeline, and 15-table normalized schema in \`budgetph_v2\`.
+- **Why:** Keep second brain living specification 100% aligned with active codebase and development momentum.
+- **Rollback:** Revert git commit in Axiom_Vault repository.
+`;
+
+fs.appendFileSync(logPath, entry, 'utf8');
+console.log('✅ Vault Changelog successfully updated.');
+
