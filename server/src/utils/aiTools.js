@@ -163,6 +163,40 @@ export const aiToolDefinitions = [
         required: ['amount']
       }
     }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'add_family_allowance',
+      description: 'Adds a family member (e.g. child, spouse, parent) and assigns a recurring daily, weekly, or monthly allowance or baon to the budget.',
+      parameters: {
+        type: 'object',
+        properties: {
+          name: {
+            type: 'string',
+            description: 'Name of the family member or dependent (e.g. "Grade 2 Kid", "Bunso", "Nanay")'
+          },
+          role: {
+            type: 'string',
+            description: 'Relationship or role (e.g. "child", "parent", "spouse", "sibling")'
+          },
+          amount: {
+            type: 'number',
+            description: 'Allowance amount in PHP'
+          },
+          period: {
+            type: 'string',
+            enum: ['daily', 'weekly', 'monthly'],
+            description: 'How often the allowance is given (daily, weekly, or monthly)'
+          },
+          notes: {
+            type: 'string',
+            description: 'Purpose or details (e.g. "Baon and pamasahe Mon-Fri")'
+          }
+        },
+        required: ['name', 'amount', 'period']
+      }
+    }
   }
 ];
 
@@ -465,6 +499,49 @@ export async function executeAiTool(name, args, userId = 1) {
             deposited: amount,
             current_total: targetGoal.current_amount,
             target_amount: targetGoal.target_amount
+          }
+        };
+      }
+
+      case 'add_family_allowance': {
+        const { name, role = 'child', amount, period = 'weekly', notes = '' } = args;
+        const numAmt = parseFloat(amount);
+
+        // Find or create family member
+        const [existing] = await pool.query(
+          'SELECT id FROM family_members WHERE user_id = ? AND LOWER(name) = LOWER(?) LIMIT 1',
+          [userId, name]
+        );
+
+        let memberId;
+        if (existing.length > 0) {
+          memberId = existing[0].id;
+        } else {
+          const [ins] = await pool.query(
+            'INSERT INTO family_members (user_id, name, role, notes) VALUES (?, ?, ?, ?)',
+            [userId, name, role, notes]
+          );
+          memberId = ins.insertId;
+        }
+
+        // Insert allowance
+        const [allowanceRes] = await pool.query(
+          'INSERT INTO allowances (user_id, family_member_id, amount, period, notes) VALUES (?, ?, ?, ?, ?)',
+          [userId, memberId, numAmt, period, notes]
+        );
+
+        return {
+          success: true,
+          action_type: 'add_family_allowance',
+          summary: `Added allowance for ${name}: ₱${numAmt.toLocaleString()} (${period}).`,
+          data: {
+            allowance_id: allowanceRes.insertId,
+            member_id: memberId,
+            name,
+            role,
+            amount: numAmt,
+            period,
+            notes
           }
         };
       }

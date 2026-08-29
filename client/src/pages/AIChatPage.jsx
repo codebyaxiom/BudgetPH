@@ -26,10 +26,23 @@ export function AIChatPage({ setActiveTab }) {
     localStorage.setItem('budgetph_ai_mode', mode);
   };
 
+  const extractChoices = (rawText) => {
+    if (!rawText) return [];
+    const match = rawText.match(/<!--\s*CHOICES:\s*(\[.*?\])\s*-->/is);
+    if (match) {
+      try {
+        return JSON.parse(match[1]);
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
+  };
+
   const cleanMessageText = (rawText) => {
     if (!rawText) return '';
-    // Strip XML tool calls or internal tags if present
     let cleaned = rawText
+      .replace(/<!--\s*CHOICES:[\s\S]*?-->/gi, '')
       .replace(/<tool_call>[\s\S]*?<\/tool_call>/gi, '')
       .replace(/<function=[\s\S]*?<\/function>/gi, '')
       .replace(/<think>[\s\S]*?<\/think>/gi, '')
@@ -230,6 +243,7 @@ export function AIChatPage({ setActiveTab }) {
             const isGroq = m.engine === 'groq';
             const receipt = m.action_receipt;
             const content = cleanMessageText(m.message);
+            const choices = !isUser ? extractChoices(m.message) : [];
 
             if (!content && !receipt) return null;
 
@@ -270,9 +284,46 @@ export function AIChatPage({ setActiveTab }) {
                     </div>
                   )}
 
+                  {/* Interactive Co-Planning Choice Pills */}
+                  {choices && choices.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-1 animate-in fade-in duration-200">
+                      {choices.map((opt, optIdx) => (
+                        <button
+                          key={optIdx}
+                          onClick={() => handleSend(opt)}
+                          className="px-3.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/80 hover:bg-emerald-100 dark:hover:bg-emerald-900 border border-emerald-300 dark:border-emerald-700/80 text-emerald-800 dark:text-emerald-300 font-bold text-xs transition shadow-sm cursor-pointer hover:scale-[1.02] active:scale-[0.98] flex items-center gap-1.5"
+                        >
+                          <span>👉</span>
+                          <span>{opt}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   {/* Rich Interactive Action Receipt Cards */}
                   {receipt && receipt.success && (
-                    <div className="w-full animate-in zoom-in-95 duration-200">
+                    <div className="w-full animate-in zoom-in-95 duration-200 space-y-2">
+                      {/* Family Allowance Card */}
+                      {receipt.action_type === 'add_family_allowance' && (
+                        <div className="p-3.5 rounded-2xl bg-purple-500/10 border border-purple-500/30 text-xs flex items-center justify-between shadow-sm">
+                          <div>
+                            <p className="font-bold text-purple-900 dark:text-purple-300 flex items-center gap-1.5">
+                              <span>🎒</span>
+                              <span>{receipt.data.name} Allowance: ₱{Number(receipt.data.amount).toLocaleString()} / {receipt.data.period}</span>
+                            </p>
+                            <p className="text-[10px] text-purple-700/80 dark:text-purple-400/80 mt-0.5">
+                              {receipt.data.notes || (language === 'tl' ? 'Naidagdag sa family allowances' : 'Added to family allowances')}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => setActiveTab && setActiveTab('allowances')}
+                            className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-[11px] transition flex items-center gap-1 cursor-pointer"
+                          >
+                            <span>{language === 'tl' ? 'Tingnan' : 'View'}</span>
+                            <ArrowRight className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
                       {/* Payday Cycle Action Card */}
                       {receipt.action_type === 'record_payday' && (
                         <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-green-500/10 border border-emerald-500/30 dark:border-emerald-500/40 text-slate-900 dark:text-slate-100 space-y-2.5 shadow-sm">
