@@ -9,14 +9,28 @@ export async function getUserFinancialSnapshot(userId = 1) {
   const metrics = await getCycleBudgetMetrics(userId);
   const cycle = await getActivePaydayCycle(userId);
 
-  const [obligations] = await pool.query(
-    'SELECT COUNT(*) as total, SUM(amount) as sum_amount FROM obligations WHERE user_id = ? AND is_active = 1',
-    [userId]
-  );
+  const currentMonth = new Date().getMonth() + 1;
+  const currentYear = new Date().getFullYear();
+
   const [obsList] = await pool.query(
-    'SELECT name, amount, category, due_day FROM obligations WHERE user_id = ? AND is_active = 1',
-    [userId]
+    `SELECT o.id, o.name, o.amount, o.category, o.due_day,
+            EXISTS (
+              SELECT 1 FROM obligation_payments op
+              WHERE op.obligation_id = o.id
+                AND MONTH(op.paid_date) = ?
+                AND YEAR(op.paid_date) = ?
+            ) as is_paid
+     FROM obligations o
+     WHERE o.user_id = ? AND o.is_active = 1
+     ORDER BY o.due_day ASC`,
+    [currentMonth, currentYear, userId]
   );
+
+  const unpaidBills = obsList.filter(o => !o.is_paid);
+  const paidBills = obsList.filter(o => o.is_paid);
+  const totalUnpaidAmount = unpaidBills.reduce((acc, o) => acc + parseFloat(o.amount), 0);
+  const totalPaidAmount = paidBills.reduce((acc, o) => acc + parseFloat(o.amount), 0);
+
   const [savings] = await pool.query(
     'SELECT SUM(current_amount) as total_savings FROM savings_goals WHERE user_id = ? AND is_active = 1',
     [userId]
@@ -36,9 +50,18 @@ export async function getUserFinancialSnapshot(userId = 1) {
     remaining_today: metrics.remaining_today,
     days_until_payday: metrics.days_until_payday,
     spendable_remaining: metrics.spendable_remaining,
-    pending_obligations: obligations[0]?.total || 0,
-    total_obligations_amount: obligations[0]?.sum_amount || 0,
-    active_bills_summary: obsList.map(o => `${o.name} (₱${Number(o.amount).toLocaleString()})`).join(', ') || 'None yet',
+    
+    // Obligations Breakdown
+    unpaid_bills_count: unpaidBills.length,
+    total_unpaid_bills_amount: totalUnpaidAmount,
+    unpaid_bills_list: unpaidBills.map(o => `${o.name} (₱${Number(o.amount).toLocaleString()} - due day ${o.due_day})`).join(', ') || 'None! All bills are paid 🎉',
+    
+    paid_bills_count: paidBills.length,
+    total_paid_bills_amount: totalPaidAmount,
+    paid_bills_list: paidBills.map(o => `${o.name} (₱${Number(o.amount).toLocaleString()}) [PAID ✅]`).join(', ') || 'None yet',
+
+    all_registered_bills_summary: obsList.map(o => `${o.name} (₱${Number(o.amount).toLocaleString()} [${o.is_paid ? 'PAID ✅' : 'UNPAID ⏳'}])`).join(', '),
+    
     pending_wishlist_count: wishlistRows.length,
     wishlist_summary: wishlistRows.map(w => `${w.name} (₱${Number(w.estimated_amount).toLocaleString()} [${w.priority}])`).join(', ') || 'No saved wants yet',
     total_savings: savings[0]?.total_savings || 0,
@@ -127,6 +150,8 @@ export async function sendMessage(req, res) {
 - When they confirm they purchased a wishlist item, call 'buy_wishlist_item'.`,
         obligations: `CURRENT TOPIC CHANNEL: ⚡ BILLS & OBLIGATIONS
 - You are strictly operating as the Bills & Debt payoff advisor.
+- When user asks for UNPAID bills, ONLY list the bills under 'UNPAID Bills' in Live Context below.
+- Do NOT list bills marked as 'ALREADY PAID Bills' under unpaid bills.
 - When user reports a bill/debt/loan, call 'add_obligation_or_debt'.
 - When user reports paying a bill, call 'mark_bill_paid'.`,
         payday: `CURRENT TOPIC CHANNEL: 💰 SAHOD & PAYDAY SIMULATOR
@@ -150,8 +175,9 @@ You have direct autonomous tools to manage the user's budget database.
 
 ${channelPrompt}
 
-CRITICAL IDENTITY & PRIVACY RULES:
+CRITICAL GROUND TRUTH & PRIVACY RULES:
 - You are chatting directly with user "${snapshot.user_name}".
+- Ground all responses strictly on the Live Financial Context below. The database is the single source of truth.
 - NEVER EVER ask the user for their "User ID", "Account ID", or internal database keys. The system handles all authentication automatically in the background.
 - When the user mentions paying a bill (e.g. "electricity", "kuryente", "meralco", "wifi", "internet"), IMMEDIATELY call the 'mark_bill_paid' tool.
 
@@ -196,9 +222,15 @@ Live Financial Context:
 - Spent Today: ₱${snapshot.spent_today}
 - Days until Next Payday: ${snapshot.days_until_payday} days
 - Total Cycle Spendable Remaining: ₱${snapshot.spendable_remaining}
-- Active Registered Bills: ${snapshot.active_bills_summary}
+
+BILLS & OBLIGATIONS STATUS:
+- UNPAID Bills (${snapshot.unpaid_bills_count} bills, Total: ₱${snapshot.total_unpaid_bills_amount.toLocaleString()}):
+  ${snapshot.unpaid_bills_list}
+- ALREADY PAID Bills (${snapshot.paid_bills_count} bills, Total: ₱${snapshot.total_paid_bills_amount.toLocaleString()}):
+  ${snapshot.paid_bills_list}
+- All Registered Bills Status: ${snapshot.all_registered_bills_summary}
+
 - Saved Wants in Wishlist (${snapshot.pending_wishlist_count}): ${snapshot.wishlist_summary}
-- Total Obligations Amount: ₱${snapshot.total_obligations_amount}
 - Current Savings: ₱${snapshot.total_savings}
 
 When you execute a tool, warmly confirm the exact details in your response.`;
