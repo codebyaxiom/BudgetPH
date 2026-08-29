@@ -131,31 +131,48 @@ Always answer with clarity, warmth, and exact arithmetic based on these numbers.
       ];
 
       try {
-        const modelName = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
-        const groqRes = await axios.post(
-          'https://api.groq.com/openai/v1/chat/completions',
-          {
-            model: modelName,
-            messages,
-            temperature: 0.6
-          },
-          {
-            headers: {
-              'Authorization': `Bearer ${apiKey}`,
-              'Content-Type': 'application/json'
-            },
-            timeout: 15000
+        const primaryModel = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
+        const modelList = [primaryModel, 'openai/gpt-oss-20b', 'qwen/qwen3.6-27b', 'groq/compound'];
+        let groqText = '';
+        let successfulModel = '';
+
+        for (const mName of modelList) {
+          try {
+            const groqRes = await axios.post(
+              'https://api.groq.com/openai/v1/chat/completions',
+              {
+                model: mName,
+                messages,
+                temperature: 0.6
+              },
+              {
+                headers: {
+                  'Authorization': `Bearer ${apiKey}`,
+                  'Content-Type': 'application/json'
+                },
+                timeout: 15000
+              }
+            );
+            const content = groqRes.data?.choices?.[0]?.message?.content;
+            if (content) {
+              groqText = content;
+              successfulModel = mName;
+              break;
+            }
+          } catch (modelErr) {
+            console.warn(`Groq model ${mName} failed, trying next fallback:`, modelErr.response?.data?.error?.message || modelErr.message);
           }
-        );
-        const groqText = groqRes.data?.choices?.[0]?.message?.content;
+        }
+
         if (groqText) {
-          aiResponse = groqText;
+          // Strip any internal reasoning tags if present
+          const cleanText = groqText.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+          aiResponse = cleanText || groqText;
           usedEngine = 'groq';
-          usedModel = modelName;
+          usedModel = successfulModel;
         }
       } catch (groqErr) {
-        console.error('Groq API call error:', groqErr.response?.data || groqErr.message);
-        // Fallback to local intelligent rules below if Groq throws
+        console.error('Groq API error:', groqErr.response?.data || groqErr.message);
       }
     }
 
