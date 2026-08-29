@@ -127,6 +127,12 @@ CRITICAL IDENTITY & PRIVACY RULES:
 - NEVER EVER ask the user for their "User ID", "Account ID", or internal database keys. The system handles all authentication automatically in the background.
 - When the user mentions paying a bill (e.g. "electricity", "kuryente", "meralco", "wifi", "internet"), IMMEDIATELY call the 'mark_bill_paid' tool.
 
+CRITICAL EXPENSE VS. WISHLIST RULES:
+- 'log_expense': ONLY call if the user ALREADY spent money, paid for something, or completed a purchase (e.g. "Kumain sa Jollibee ₱250", "Nagbayad ng pamasahe ₱50", "Binili ko kanina ₱500").
+- 'add_to_wishlist': Call whenever the user expresses a DESIRE, WANT, or FUTURE PURCHASE they are considering or holding off on (e.g. "Gusto ko sanang bilhin ang sapatos ₱2,500", "Plano kong bumili ng phone cooler ₱500 pero ipon muna", "May gusto akong bilhin"). NEVER call 'log_expense' if they are just considering or wanting to buy it!
+- 'evaluate_wants_affordability': Call when user asks what wants they can afford this cycle or payday (e.g. "Anong wants ang pwede kong bilhin ngayong sahod?").
+- 'buy_wishlist_item': Call ONLY when the user explicitly confirms they have now purchased a previously saved wishlist item (e.g. "Binili ko na yung sapatos sa wishlist").
+
 INTERACTIVE CO-PLANNING & INTERVIEW PROTOCOL (Claude / ChatGPT Style):
 - When the user asks to plan something (e.g. budgeting for a student/child, debt payoff plan, saving for a goal, or major lifestyle expenses):
   1. DO NOT dump a giant 10-row table or assume all the numbers at once.
@@ -140,7 +146,7 @@ INTERACTIVE CO-PLANNING & INTERVIEW PROTOCOL (Claude / ChatGPT Style):
 Tool Guidelines:
 1. 'record_payday': Call when user reports receiving sahod/salary (e.g. "Pumasok na sahod ko ₱20k").
 2. 'update_income_schedule': Call when user changes pay schedule (e.g. from 15/30 to monthly or weekly).
-3. 'log_expense': Call when user logs an expense or purchase (e.g. "Lunch ₱250", "Pamasahe ₱50").
+3. 'log_expense': Call when user logs an actual spent expense (e.g. "Lunch ₱250", "Pamasahe ₱50").
 4. 'add_obligation_or_debt': Call when user mentions a new bill, debt, utang, or loan.
 5. 'mark_bill_paid': Call when user mentions they paid a bill (e.g. "Nabayaran ko na kuryente").
 6. 'deposit_to_savings': Call when user puts money into emergency fund or savings.
@@ -348,7 +354,9 @@ export async function getConversationHistory(req, res) {
   try {
     const userId = 1;
     const [rows] = await pool.query(
-      'SELECT role, message, created_at FROM ai_conversations WHERE user_id = ? ORDER BY id ASC LIMIT 50',
+      `SELECT role, message, created_at FROM (
+         SELECT id, role, message, created_at FROM ai_conversations WHERE user_id = ? ORDER BY id DESC LIMIT 100
+       ) sub ORDER BY id ASC`,
       [userId]
     );
     res.json({ success: true, history: rows });
