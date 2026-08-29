@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { 
   Bot, Send, Trash2, User, Sparkles, Cpu, Zap, 
-  ArrowRight, CheckCircle2, Wallet, CalendarDays, Receipt, ShieldCheck, ChevronRight 
+  ArrowRight, CheckCircle2, Wallet, CalendarDays, Receipt, ShieldCheck, ChevronRight,
+  Copy, Check 
 } from 'lucide-react';
 import * as api from '../services/api';
 import { useBudgetStore } from '../stores/useBudgetStore';
@@ -14,7 +15,15 @@ export function AIChatPage({ setActiveTab }) {
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
   const [aiMode, setAiMode] = useState(localStorage.getItem('budgetph_ai_mode') || 'auto');
+  const [copiedIdx, setCopiedIdx] = useState(null);
   const messagesEndRef = useRef(null);
+
+  const handleCopy = (text, idx) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedIdx(idx);
+    setTimeout(() => setCopiedIdx(null), 2000);
+  };
 
   const user = dashboardData?.user;
   const metrics = dashboardData?.metrics || {};
@@ -140,10 +149,10 @@ export function AIChatPage({ setActiveTab }) {
   ];
 
   return (
-    <div className="flex flex-col h-full w-full bg-slate-50/50 dark:bg-slate-950/40 relative select-none">
+    <div className="flex flex-col h-full w-full bg-slate-50/50 dark:bg-slate-950/40 relative select-text">
       
       {/* 1. Minimal Ambient Header Ribbon */}
-      <div className="h-14 border-b border-slate-200 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between gap-3 flex-shrink-0 z-10">
+      <div className="h-14 border-b border-slate-200 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between gap-3 flex-shrink-0 z-10 select-none">
         
         {/* Left: App Title & Model Switcher */}
         <div className="flex items-center gap-3">
@@ -246,7 +255,7 @@ export function AIChatPage({ setActiveTab }) {
       </div>
 
       {/* 2. Full-Height Message Stream (ChatGPT / Gemini Style) */}
-      <div className="flex-1 overflow-y-auto px-4 py-6">
+      <div className="flex-1 overflow-y-auto px-4 py-6 select-text">
         <div className="max-w-3xl mx-auto space-y-6">
           {messages.map((m, idx) => {
             const isUser = m.role === 'user';
@@ -260,7 +269,7 @@ export function AIChatPage({ setActiveTab }) {
             return (
               <div key={idx} className={`flex items-start gap-3.5 ${isUser ? 'justify-end' : ''}`}>
                 {!isUser && (
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-green-600 to-emerald-500 text-white flex items-center justify-center text-xs font-black shadow-md flex-shrink-0 mt-1">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-green-600 to-emerald-500 text-white flex items-center justify-center text-xs font-black shadow-md flex-shrink-0 mt-1 select-none">
                     AI
                   </div>
                 )}
@@ -268,7 +277,7 @@ export function AIChatPage({ setActiveTab }) {
                 <div className={`max-w-2xl flex flex-col space-y-2.5 ${isUser ? 'items-end' : 'items-start'}`}>
                   {/* Engine Tag */}
                   {!isUser && (
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 select-none">
                       {isGroq ? (
                         <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-700 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-950/70 px-2 py-0.5 rounded-md border border-emerald-300/60 dark:border-emerald-800/60">
                           <Sparkles className="w-2.5 h-2.5 text-emerald-500 animate-pulse" />
@@ -283,14 +292,28 @@ export function AIChatPage({ setActiveTab }) {
                     </div>
                   )}
 
-                  {/* Message Bubble */}
+                  {/* Message Bubble with Hover Copy Button */}
                   {content && (
-                    <div className={`p-4 rounded-2xl text-sm leading-relaxed ${
-                      isUser
-                        ? 'bg-green-600 text-white rounded-tr-sm shadow-md font-medium'
-                        : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-tl-sm shadow-sm'
-                    }`}>
-                      <div dangerouslySetInnerHTML={{ __html: content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br />') }} />
+                    <div className="relative group/bubble flex items-start gap-1 max-w-full">
+                      <div className={`p-4 rounded-2xl text-sm leading-relaxed select-text cursor-text select-auto ${
+                        isUser
+                          ? 'bg-green-600 text-white rounded-tr-sm shadow-md font-medium'
+                          : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-tl-sm shadow-sm'
+                      }`}>
+                        <div dangerouslySetInnerHTML={{ __html: content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br />') }} />
+                      </div>
+
+                      <button
+                        onClick={() => handleCopy(content, idx)}
+                        title="Copy text"
+                        className="opacity-0 group-hover/bubble:opacity-100 transition p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/70 dark:hover:bg-slate-800 cursor-pointer flex-shrink-0 select-none mt-1"
+                      >
+                        {copiedIdx === idx ? (
+                          <Check className="w-3.5 h-3.5 text-emerald-500" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5" />
+                        )}
+                      </button>
                     </div>
                   )}
 
