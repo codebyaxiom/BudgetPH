@@ -13,6 +13,10 @@ export async function getUserFinancialSnapshot(userId = 1) {
     'SELECT COUNT(*) as total, SUM(amount) as sum_amount FROM obligations WHERE user_id = ? AND is_active = 1',
     [userId]
   );
+  const [obsList] = await pool.query(
+    'SELECT name, amount, category, due_day FROM obligations WHERE user_id = ? AND is_active = 1',
+    [userId]
+  );
   const [savings] = await pool.query(
     'SELECT SUM(current_amount) as total_savings FROM savings_goals WHERE user_id = ? AND is_active = 1',
     [userId]
@@ -30,6 +34,7 @@ export async function getUserFinancialSnapshot(userId = 1) {
     spendable_remaining: metrics.spendable_remaining,
     pending_obligations: obligations[0]?.total || 0,
     total_obligations_amount: obligations[0]?.sum_amount || 0,
+    active_bills_summary: obsList.map(o => `${o.name} (₱${Number(o.amount).toLocaleString()})`).join(', ') || 'None yet',
     total_savings: savings[0]?.total_savings || 0,
     cycle_payday_date: cycle?.payday_date,
     cycle_next_payday: cycle?.next_payday_date
@@ -111,6 +116,11 @@ export async function sendMessage(req, res) {
       const systemPrompt = `You are BudgetPH, an intelligent, empathetic, and proactive financial co-pilot for Filipino users.
 You have direct autonomous tools to manage the user's budget database.
 
+CRITICAL IDENTITY & PRIVACY RULES:
+- You are chatting directly with user "${snapshot.user_name}".
+- NEVER EVER ask the user for their "User ID", "Account ID", or internal database keys. The system handles all authentication automatically in the background.
+- When the user mentions paying a bill (e.g. "electricity", "kuryente", "meralco", "wifi", "internet"), IMMEDIATELY call the 'mark_bill_paid' tool. The system will match it or auto-create it seamlessly.
+
 Tool Guidelines:
 1. 'record_payday': Call this when user reports receiving their sahod/salary (e.g. "Pumasok na sahod ko ₱20k"). If amount is mentioned, call it immediately. Note: next_payday_date is OPTIONAL because the system auto-computes it from their pay schedule (${snapshot.pay_schedule}). If the user does not state the amount, politely ask for the amount.
 2. 'update_income_schedule': Call when the user changes their pay schedule (e.g. from 15/30 to monthly or weekly).
@@ -132,7 +142,8 @@ Live Financial Context:
 - Spent Today: ₱${snapshot.spent_today}
 - Days until Next Payday: ${snapshot.days_until_payday} days
 - Total Cycle Spendable Remaining: ₱${snapshot.spendable_remaining}
-- Pending Bills: ${snapshot.pending_obligations} bills (Total ₱${snapshot.total_obligations_amount})
+- Active Registered Bills: ${snapshot.active_bills_summary}
+- Total Obligations Amount: ₱${snapshot.total_obligations_amount}
 - Current Savings: ₱${snapshot.total_savings}
 
 When you execute a tool, warmly confirm the exact details in your response.`;

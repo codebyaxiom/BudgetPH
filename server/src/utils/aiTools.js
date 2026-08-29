@@ -349,44 +349,75 @@ export async function executeAiTool(name, args, userId = 1) {
       }
 
       case 'mark_bill_paid': {
-        const billName = args.bill_name.toLowerCase();
-        const currentMonth = new Date().getMonth() + 1;
-        const currentYear = new Date().getFullYear();
+        const rawBill = (args.bill_name || '').toLowerCase().trim();
+        const amountPaid = parseFloat(args.amount_paid || 0);
         const todayStr = new Date().toISOString().split('T')[0];
 
-        // Search for matching obligation
-        const [obs] = await pool.query(
-          `SELECT * FROM obligations WHERE user_id = ? AND is_active = 1 AND LOWER(name) LIKE ? LIMIT 1`,
-          [userId, `%${billName}%`]
+        // Keyword synonym mapping for Pinoy utilities & bills
+        let searchTerms = [rawBill];
+        let detectedCategory = 'other';
+
+        if (rawBill.includes('kuryente') || rawBill.includes('electric') || rawBill.includes('meralco')) {
+          searchTerms = ['kuryente', 'electric', 'meralco', 'power'];
+          detectedCategory = 'electricity';
+        } else if (rawBill.includes('tubig') || rawBill.includes('water') || rawBill.includes('maynilad') || rawBill.includes('manila water')) {
+          searchTerms = ['tubig', 'water', 'maynilad', 'manila water'];
+          detectedCategory = 'water';
+        } else if (rawBill.includes('internet') || rawBill.includes('wifi') || rawBill.includes('pldt') || rawBill.includes('converge') || rawBill.includes('globe')) {
+          searchTerms = ['internet', 'wifi', 'pldt', 'converge', 'globe'];
+          detectedCategory = 'internet';
+        } else if (rawBill.includes('rent') || rawBill.includes('upa') || rawBill.includes('apartment')) {
+          searchTerms = ['rent', 'upa', 'apartment', 'house'];
+          detectedCategory = 'rent';
+        } else if (rawBill.includes('utang') || rawBill.includes('loan') || rawBill.includes('credit')) {
+          searchTerms = ['utang', 'loan', 'credit', rawBill];
+          detectedCategory = 'loan';
+        }
+
+        // Search in obligations
+        const [allObs] = await pool.query(
+          `SELECT * FROM obligations WHERE user_id = ? AND is_active = 1`,
+          [userId]
         );
 
-        if (obs.length === 0) {
-          return {
-            success: false,
-            action_type: 'mark_bill_paid',
-            summary: `Could not find an active bill matching "${args.bill_name}".`,
-            data: { bill_name: args.bill_name }
+        let target = allObs.find(o => {
+          const oName = o.name.toLowerCase();
+          return searchTerms.some(term => oName.includes(term) || term.includes(oName));
+        });
+
+        // If no bill exists yet with this name, auto-create it seamlessly
+        if (!target) {
+          const finalName = args.bill_name.charAt(0).toUpperCase() + args.bill_name.slice(1);
+          const finalAmt = amountPaid > 0 ? amountPaid : 1500;
+          const [createRes] = await pool.query(
+            `INSERT INTO obligations (user_id, name, amount, category, due_day, cutoff_assignment, is_variable, is_active, notes)
+             VALUES (?, ?, ?, ?, 15, 'auto', 0, 1, 'Auto-created via AI Assistant')`,
+            [userId, finalName, finalAmt, detectedCategory]
+          );
+          target = {
+            id: createRes.insertId,
+            name: finalName,
+            amount: finalAmt
           };
         }
 
-        const target = obs[0];
-        const amountPaid = parseFloat(args.amount_paid || target.amount);
+        const finalPaymentAmt = amountPaid > 0 ? amountPaid : target.amount;
 
         // Record payment
         await pool.query(
-          `INSERT INTO obligation_payments (obligation_id, amount_paid, paid_date, notes)
-           VALUES (?, ?, ?, ?)`,
-          [target.id, amountPaid, todayStr, 'Marked paid via BudgetPH AI Co-Pilot']
+          `INSERT INTO obligation_payments (obligation_id, user_id, amount_paid, paid_date, notes)
+           VALUES (?, ?, ?, ?, ?)`,
+          [target.id, userId, finalPaymentAmt, todayStr, 'Marked paid via BudgetPH AI Co-Pilot']
         );
 
         return {
           success: true,
           action_type: 'mark_bill_paid',
-          summary: `Marked "${target.name}" (₱${amountPaid.toLocaleString()}) as paid!`,
+          summary: `Marked "${target.name}" (₱${finalPaymentAmt.toLocaleString()}) as paid!`,
           data: {
             obligation_id: target.id,
             name: target.name,
-            amount_paid: amountPaid,
+            amount_paid: finalPaymentAmt,
             paid_date: todayStr
           }
         };
