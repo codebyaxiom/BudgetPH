@@ -98,11 +98,11 @@ export async function getProactiveAlerts(req, res) {
 export async function sendMessage(req, res) {
   try {
     const userId = 1;
-    const { message, lang = 'en', mode = 'auto' } = req.body;
+    const { message, lang = 'en', mode = 'auto', channel = 'general' } = req.body;
     if (!message) return res.status(400).json({ success: false, error: 'Message required' });
 
-    // Save user message
-    await pool.query('INSERT INTO ai_conversations (user_id, role, message) VALUES (?, ?, ?)', [userId, 'user', message]);
+    // Save user message with channel
+    await pool.query('INSERT INTO ai_conversations (user_id, channel, role, message) VALUES (?, ?, ?, ?)', [userId, channel, 'user', message]);
 
     let snapshot = await getUserFinancialSnapshot(userId);
 
@@ -114,13 +114,41 @@ export async function sendMessage(req, res) {
 
     if (mode !== 'local' && apiKey) {
       const [recentRows] = await pool.query(
-        'SELECT role, message FROM ai_conversations WHERE user_id = ? ORDER BY id DESC LIMIT 8',
-        [userId]
+        'SELECT role, message FROM ai_conversations WHERE user_id = ? AND channel = ? ORDER BY id DESC LIMIT 8',
+        [userId, channel]
       );
       const recentTurns = recentRows.reverse();
 
+      const channelFocusMap = {
+        wants: `CURRENT TOPIC CHANNEL: 🛍️ WANTS & WISHLIST DELAY BUFFER
+- You are strictly operating as the Wants & Wishlist advisor.
+- When the user mentions an item they want to buy, consider buying, or are saving up for, call 'add_to_wishlist'. NEVER call 'log_expense' for items they haven't bought yet!
+- When asked what they can afford this sahod, call 'evaluate_wants_affordability'.
+- When they confirm they purchased a wishlist item, call 'buy_wishlist_item'.`,
+        obligations: `CURRENT TOPIC CHANNEL: ⚡ BILLS & OBLIGATIONS
+- You are strictly operating as the Bills & Debt payoff advisor.
+- When user reports a bill/debt/loan, call 'add_obligation_or_debt'.
+- When user reports paying a bill, call 'mark_bill_paid'.`,
+        payday: `CURRENT TOPIC CHANNEL: 💰 SAHOD & PAYDAY SIMULATOR
+- You are strictly operating as the Payday & Cash Flow advisor.
+- When user reports receiving pay/salary, call 'record_payday'.
+- When user changes pay frequency (15/30, monthly, weekly), call 'update_income_schedule'.`,
+        allowances: `CURRENT TOPIC CHANNEL: 👨‍👩‍👧 FAMILY ALLOWANCES & BAON
+- You are strictly operating as the Family Allowance & Baon advisor.
+- When adding dependent allowance, call 'add_family_allowance'.`,
+        savings: `CURRENT TOPIC CHANNEL: 🏦 SAVINGS & EMERGENCY FUND
+- You are strictly operating as the Savings & Goals advisor.
+- When depositing money to savings, call 'deposit_to_savings'.`,
+        general: `CURRENT TOPIC CHANNEL: 🌟 GENERAL ALL-IN-ONE ADVISOR
+- You have access to all tools and assist across all budgeting categories.`
+      };
+
+      const channelPrompt = channelFocusMap[channel] || channelFocusMap.general;
+
       const systemPrompt = `You are BudgetPH, an intelligent, empathetic, and proactive financial co-pilot for Filipino users.
 You have direct autonomous tools to manage the user's budget database.
+
+${channelPrompt}
 
 CRITICAL IDENTITY & PRIVACY RULES:
 - You are chatting directly with user "${snapshot.user_name}".
@@ -184,8 +212,7 @@ When you execute a tool, warmly confirm the exact details in your response.`;
       try {
         const primaryModel = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
         const modelList = [primaryModel, 'openai/gpt-oss-20b', 'qwen/qwen3.6-27b', 'groq/compound'];
-        let successfulModel = '';
-
+        
         for (const mName of modelList) {
           try {
             const groqRes = await axios.post(
@@ -202,81 +229,66 @@ When you execute a tool, warmly confirm the exact details in your response.`;
                   'Authorization': `Bearer ${apiKey}`,
                   'Content-Type': 'application/json'
                 },
-                timeout: 15000
+                timeout: 25000
               }
             );
 
-            const choice = groqRes.data?.choices?.[0];
-            if (choice) {
-              successfulModel = mName;
+            const choice = groqRes.data.choices[0];
+            const msgObj = choice.message;
 
-              // Check if model called a tool
-              if (choice.message?.tool_calls && choice.message.tool_calls.length > 0) {
-                const toolCall = choice.message.tool_calls[0];
-                const toolName = toolCall.function.name;
-                let toolArgs = {};
-                try {
-                  toolArgs = JSON.parse(toolCall.function.arguments || '{}');
-                } catch (e) {
-                  toolArgs = {};
-                }
-
-                // Execute tool in database
-                const toolResult = await executeAiTool(toolName, toolArgs, userId);
-                actionReceipt = toolResult;
-
-                // Re-fetch fresh snapshot
-                snapshot = await getUserFinancialSnapshot(userId);
-
-                // Make follow-up call with tool result for natural synthesis
-                const toolMessages = [
-                  ...messages,
-                  choice.message,
-                  {
-                    role: 'tool',
-                    tool_call_id: toolCall.id,
-                    name: toolName,
-                    content: JSON.stringify(toolResult)
-                  }
-                ];
-
-                try {
-                  const followUpRes = await axios.post(
-                    'https://api.groq.com/openai/v1/chat/completions',
-                    {
-                      model: mName,
-                      messages: toolMessages,
-                      temperature: 0.5
-                    },
-                    {
-                      headers: {
-                        'Authorization': `Bearer ${apiKey}`,
-                        'Content-Type': 'application/json'
-                      },
-                      timeout: 15000
-                    }
-                  );
-                  aiResponse = followUpRes.data?.choices?.[0]?.message?.content || toolResult.summary;
-                } catch (fuErr) {
-                  aiResponse = toolResult.summary;
-                }
-              } else {
-                aiResponse = choice.message?.content || '';
+            if (msgObj.tool_calls && msgObj.tool_calls.length > 0) {
+              const toolCall = msgObj.tool_calls[0];
+              const tName = toolCall.function.name;
+              let tArgs = {};
+              try {
+                tArgs = JSON.parse(toolCall.function.arguments);
+              } catch (e) {
+                tArgs = {};
               }
 
-              if (aiResponse) {
-                usedEngine = 'groq';
-                usedModel = successfulModel;
-                break;
-              }
+              const toolResult = await executeAiTool(tName, tArgs, userId);
+              actionReceipt = toolResult;
+
+              // Follow-up completion with tool result
+              const followUpMessages = [
+                ...messages,
+                msgObj,
+                {
+                  role: 'tool',
+                  tool_call_id: toolCall.id,
+                  name: tName,
+                  content: JSON.stringify(toolResult)
+                }
+              ];
+
+              const followUpRes = await axios.post(
+                'https://api.groq.com/openai/v1/chat/completions',
+                {
+                  model: mName,
+                  messages: followUpMessages,
+                  temperature: 0.5
+                },
+                {
+                  headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                  },
+                  timeout: 20000
+                }
+              );
+
+              aiResponse = followUpRes.data.choices[0].message.content;
+            } else {
+              aiResponse = msgObj.content;
             }
-          } catch (modelErr) {
-            console.warn(`Groq model ${mName} attempt failed:`, modelErr.response?.data?.error?.message || modelErr.message);
-          }
-        }
 
-        if (aiResponse) {
-          aiResponse = aiResponse.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+            successfulModel = mName;
+            usedEngine = 'groq';
+            usedModel = `Groq (${mName})`;
+            break;
+          } catch (modelErr) {
+            console.warn(`Groq model ${mName} failed, falling back...`, modelErr.message);
+          }
         }
       } catch (groqErr) {
         console.error('Groq API error in sendMessage:', groqErr.response?.data || groqErr.message);
@@ -333,8 +345,8 @@ When you execute a tool, warmly confirm the exact details in your response.`;
       }
     }
 
-    // Save assistant response
-    await pool.query('INSERT INTO ai_conversations (user_id, role, message) VALUES (?, ?, ?)', [userId, 'assistant', aiResponse]);
+    // Save assistant response with channel
+    await pool.query('INSERT INTO ai_conversations (user_id, channel, role, message) VALUES (?, ?, ?, ?)', [userId, channel, 'assistant', aiResponse]);
 
     res.json({
       success: true,
@@ -342,7 +354,8 @@ When you execute a tool, warmly confirm the exact details in your response.`;
       action_receipt: actionReceipt,
       snapshot,
       engine: usedEngine,
-      model: usedModel
+      model: usedModel,
+      channel
     });
   } catch (error) {
     console.error('AI chat error in controller:', error);
@@ -353,13 +366,16 @@ When you execute a tool, warmly confirm the exact details in your response.`;
 export async function getConversationHistory(req, res) {
   try {
     const userId = 1;
+    const channel = req.query.channel || 'general';
     const [rows] = await pool.query(
       `SELECT role, message, created_at FROM (
-         SELECT id, role, message, created_at FROM ai_conversations WHERE user_id = ? ORDER BY id DESC LIMIT 100
+         SELECT id, role, message, created_at FROM ai_conversations 
+         WHERE user_id = ? AND channel = ? 
+         ORDER BY id DESC LIMIT 100
        ) sub ORDER BY id ASC`,
-      [userId]
+      [userId, channel]
     );
-    res.json({ success: true, history: rows });
+    res.json({ success: true, history: rows, channel });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -368,9 +384,74 @@ export async function getConversationHistory(req, res) {
 export async function clearConversationHistory(req, res) {
   try {
     const userId = 1;
-    await pool.query('DELETE FROM ai_conversations WHERE user_id = ?', [userId]);
-    res.json({ success: true, message: 'Chat history cleared' });
+    const channel = req.query.channel;
+    if (channel) {
+      await pool.query('DELETE FROM ai_conversations WHERE user_id = ? AND channel = ?', [userId, channel]);
+    } else {
+      await pool.query('DELETE FROM ai_conversations WHERE user_id = ?', [userId]);
+    }
+    res.json({ success: true, message: 'Chat history cleared', channel: channel || 'all' });
   } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+}
+
+export async function submitFeedback(req, res) {
+  try {
+    const userId = 1;
+    const { channel = 'general', user_message, ai_response, rating, notes = '' } = req.body;
+    if (!user_message || !ai_response || !rating) {
+      return res.status(400).json({ success: false, error: 'user_message, ai_response, and rating required' });
+    }
+
+    const [ins] = await pool.query(
+      `INSERT INTO ai_feedback (user_id, channel, user_message, ai_response, rating, notes)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [userId, channel, user_message, ai_response, rating, notes]
+    );
+
+    res.json({ success: true, feedback_id: ins.insertId, message: 'Feedback logged for model training' });
+  } catch (error) {
+    console.error('Error logging AI feedback:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+}
+
+export async function exportTrainingDataset(req, res) {
+  try {
+    const [feedbackRows] = await pool.query(
+      `SELECT channel, user_message, ai_response, rating, notes, created_at 
+       FROM ai_feedback 
+       WHERE rating = 'positive' 
+       ORDER BY id ASC`
+    );
+
+    const sftLines = feedbackRows.map(row => ({
+      messages: [
+        {
+          role: 'system',
+          content: `You are BudgetPH, an intelligent financial co-pilot tailored for Filipino budgeting routines. Channel: ${row.channel}.`
+        },
+        { role: 'user', content: row.user_message },
+        { role: 'assistant', content: row.ai_response }
+      ],
+      metadata: {
+        channel: row.channel,
+        rating: row.rating,
+        exported_at: new Date().toISOString()
+      }
+    }));
+
+    res.setHeader('Content-Disposition', 'attachment; filename=budgetph_training_dataset.json');
+    res.setHeader('Content-Type', 'application/json');
+    res.json({
+      success: true,
+      total_records: sftLines.length,
+      dataset_format: 'Supervised Fine-Tuning (SFT) / ChatML',
+      data: sftLines
+    });
+  } catch (error) {
+    console.error('Error exporting training dataset:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 }

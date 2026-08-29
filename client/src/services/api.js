@@ -78,8 +78,13 @@ export const fetchSettings = () => request('/settings');
 export const updateProfile = (payload) => request('/settings/profile', { method: 'POST', body: payload });
 export const exportData = () => request('/settings/export');
 
-// AI Chat
-export const fetchAIHistory = () => request('/ai/history');
+// AI Chat & Model Training Dataset
+export const fetchAIHistory = (channel = 'general') => request(`/ai/history?channel=${channel}`);
 export const fetchProactiveAlerts = (lang = 'en') => request(`/ai/alerts?lang=${lang}`);
-export const sendAIMessage = (message, lang = 'en', mode = 'auto') => request('/ai/message', { method: 'POST', body: { message, lang, mode } });
-export const clearAIHistory = () => request('/ai/history', { method: 'DELETE' });
+export const sendAIMessage = (message, lang = 'en', mode = 'auto', channel = 'general') => 
+  request('/ai/message', { method: 'POST', body: { message, lang, mode, channel } });
+export const clearAIHistory = (channel = 'general') => 
+  request(`/ai/history?channel=${channel}`, { method: 'DELETE' });
+export const submitAIFeedback = (payload) => 
+  request('/ai/feedback', { method: 'POST', body: payload });
+export const exportAITrainingData = () => request('/ai/export-training-data');

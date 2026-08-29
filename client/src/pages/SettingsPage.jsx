@@ -237,6 +237,39 @@ export function SettingsPage() {
         </button>
       </div>
 
+      {/* AI Fine-Tuning & Training Dataset Export Card */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h3 className="text-base font-bold text-slate-900 dark:text-slate-50 font-['Plus_Jakarta_Sans'] flex items-center gap-2">
+            <span className="text-lg">🤖</span>
+            <span>AI Model Training Dataset (SFT / ChatML)</span>
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            I-download ang lahat ng aprubadong Taglish budget dialogues at 👍 feedback logs para mag-fine-tune ng custom AI model (Llama 3 / Qwen / Gemma).
+          </p>
+        </div>
+        <button
+          onClick={async () => {
+            try {
+              const dataset = await api.exportAITrainingData();
+              const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dataset, null, 2));
+              const a = document.createElement('a');
+              a.setAttribute("href", dataStr);
+              a.setAttribute("download", `budgetph_ai_training_dataset_${new Date().toISOString().split('T')[0]}.json`);
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+            } catch (e) {
+              alert('Export error: ' + e.message);
+            }
+          }}
+          className="px-4 py-2.5 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/80 text-emerald-800 dark:text-emerald-200 text-xs font-bold rounded-xl border border-emerald-300/80 dark:border-emerald-700/80 flex items-center gap-2 transition cursor-pointer flex-shrink-0 shadow-xs"
+        >
+          <Download className="w-4 h-4 text-emerald-600" />
+          <span>Download Dataset (SFT)</span>
+        </button>
+      </div>
+
       {/* Fast-Track Re-run Card */}
       <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-slate-900 border border-emerald-200 dark:border-emerald-800/50 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

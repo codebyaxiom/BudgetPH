@@ -65,10 +65,12 @@ router.get('/settings', settings.getSettings);
 router.post('/settings/profile', settings.updateProfile);
 router.get('/settings/export', settings.exportData);
 
-// AI Chat
+// AI Chat & Training Dataset
 router.get('/ai/history', ai.getHistory);
 router.get('/ai/alerts', ai.getProactiveAlerts);
 router.post('/ai/message', ai.sendMessage);
+router.post('/ai/feedback', ai.submitFeedback);
+router.get('/ai/export-training-data', ai.exportTrainingDataset);
 router.delete('/ai/history', ai.clearHistory);
 
 export default router;
