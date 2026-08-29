@@ -26,10 +26,21 @@ export function AIChatPage({ setActiveTab }) {
     localStorage.setItem('budgetph_ai_mode', mode);
   };
 
+  const cleanMessageText = (rawText) => {
+    if (!rawText) return '';
+    // Strip XML tool calls or internal tags if present
+    let cleaned = rawText
+      .replace(/<tool_call>[\s\S]*?<\/tool_call>/gi, '')
+      .replace(/<function=[\s\S]*?<\/function>/gi, '')
+      .replace(/<think>[\s\S]*?<\/think>/gi, '')
+      .trim();
+    return cleaned;
+  };
+
   const loadHistory = async () => {
     const res = await api.fetchAIHistory();
     if (res.success && res.history?.length) {
-      setMessages(res.history);
+      setMessages(res.history.filter(m => cleanMessageText(m.message).length > 0));
     } else {
       setMessages([
         {
@@ -65,7 +76,7 @@ export function AIChatPage({ setActiveTab }) {
           ...prev,
           {
             role: 'assistant',
-            message: res.message,
+            message: cleanMessageText(res.message) || (language === 'tl' ? 'Nagawa ko na ang iyong request! ✅' : 'Action completed successfully! ✅'),
             engine: res.engine,
             model: res.model,
             action_receipt: res.action_receipt
@@ -108,120 +119,36 @@ export function AIChatPage({ setActiveTab }) {
 
   const suggestions = [
     language === 'tl' ? 'Pumasok na sahod ko ₱20,000' : 'Received my sahod ₱20,000',
-    language === 'tl' ? 'Kumain sa labas ₱350, want' : 'Logged ₱350 lunch, need',
+    language === 'tl' ? 'Kumain sa Jollibee ₱250 need' : 'Logged ₱250 lunch, need',
     language === 'tl' ? 'Dumating kuryente ₱2,400 due 20th' : 'Add electricity bill ₱2,400 due 20th',
     language === 'tl' ? 'Nabayaran ko na ang internet ₱800' : 'Paid internet bill ₱800',
     language === 'tl' ? 'Magtabi ng ₱1,000 sa Emergency Fund' : 'Save ₱1,000 to Emergency Fund'
   ];
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 animate-in fade-in duration-300">
+    <div className="flex flex-col h-full w-full bg-slate-50/50 dark:bg-slate-950/40 relative select-none">
       
-      {/* Ambient Live Pulse Ticker Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div 
-          onClick={() => setActiveTab && setActiveTab('daily')}
-          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-500 rounded-2xl p-4 shadow-sm cursor-pointer transition group"
-        >
-          <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider">{t('spendable_today_hero')}</span>
-            <Wallet className="w-4 h-4 text-emerald-500 group-hover:translate-x-0.5 transition" />
-          </div>
-          <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-50">
-            ₱{Number(metrics.remaining_today || 0).toLocaleString()}
-          </p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1">
-            <span>{language === 'tl' ? 'I-click para sa Daily Log' : 'Click for Daily Log'}</span>
-            <ChevronRight className="w-3 h-3" />
-          </p>
-        </div>
-
-        <div 
-          onClick={() => setActiveTab && setActiveTab('payday')}
-          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-blue-500 dark:hover:border-blue-500 rounded-2xl p-4 shadow-sm cursor-pointer transition group"
-        >
-          <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider">{t('stat_days_until_payday')}</span>
-            <CalendarDays className="w-4 h-4 text-blue-500 group-hover:translate-x-0.5 transition" />
-          </div>
-          <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-50">
-            {metrics.days_until_payday || 0} {language === 'tl' ? 'Araw' : 'Days'}
-          </p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1">
-            <span>{language === 'tl' ? 'Payday Simulator' : 'Payday Simulator'}</span>
-            <ChevronRight className="w-3 h-3" />
-          </p>
-        </div>
-
-        <div 
-          onClick={() => setActiveTab && setActiveTab('obligations')}
-          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-500 dark:hover:border-amber-500 rounded-2xl p-4 shadow-sm cursor-pointer transition group"
-        >
-          <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider">{t('stat_obligations')}</span>
-            <Receipt className="w-4 h-4 text-amber-500 group-hover:translate-x-0.5 transition" />
-          </div>
-          <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-50">
-            {obligations.filter(o => !o.is_paid).length} {language === 'tl' ? 'Pending' : 'Pending'}
-          </p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1">
-            <span>{language === 'tl' ? 'Tingnan ang Bills' : 'Manage Bills'}</span>
-            <ChevronRight className="w-3 h-3" />
-          </p>
-        </div>
-
-        <div 
-          onClick={() => setActiveTab && setActiveTab('savings')}
-          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-teal-500 dark:hover:border-teal-500 rounded-2xl p-4 shadow-sm cursor-pointer transition group"
-        >
-          <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider">{t('savings')}</span>
-            <ShieldCheck className="w-4 h-4 text-teal-500 group-hover:translate-x-0.5 transition" />
-          </div>
-          <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-50">
-            ₱{Number(dashboardData?.savings?.totalCurrent || 0).toLocaleString()}
-          </p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1">
-            <span>{language === 'tl' ? 'Emergency Fund' : 'Emergency Fund'}</span>
-            <ChevronRight className="w-3 h-3" />
-          </p>
-        </div>
-      </div>
-
-      {/* Main Command Center Header & Engine Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* 1. Minimal Ambient Header Ribbon */}
+      <div className="h-14 border-b border-slate-200 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between gap-3 flex-shrink-0 z-10">
+        
+        {/* Left: App Title & Model Switcher */}
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-green-600 to-emerald-500 text-white flex items-center justify-center shadow-md text-2xl">
-            🤖
+          <div className="flex items-center gap-2">
+            <span className="text-xl">🤖</span>
+            <span className="font-extrabold text-sm text-slate-900 dark:text-slate-50 font-['Plus_Jakarta_Sans'] hidden sm:inline">
+              BudgetPH Co-Pilot
+            </span>
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-black text-slate-900 dark:text-slate-50 font-['Plus_Jakarta_Sans']">
-                BudgetPH AI Command Center
-              </h1>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-green-100 dark:bg-green-950/80 text-green-700 dark:text-green-300 border border-green-300/60 dark:border-green-800/60">
-                AI-Native OS
-              </span>
-            </div>
-            <p className="text-slate-500 dark:text-slate-400 text-xs">
-              {language === 'tl' 
-                ? 'Ang iyong autonomous personal financial co-pilot. I-chat ang sahod, gastos, o bills!' 
-                : 'Your autonomous personal financial co-pilot. Chat your salary, expenses, or bills!'}
-            </p>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-2">
-          {/* Mode Selector Pill */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-1 flex items-center shadow-sm">
+          <div className="bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl flex items-center border border-slate-200 dark:border-slate-700/60 text-[11px]">
             <button
               type="button"
               onClick={() => handleModeChange('auto')}
               title="Automatic: Uses Groq Cloud LLM with tool calling, falls back to local math engine"
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer ${
+              className={`px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1 cursor-pointer ${
                 aiMode === 'auto'
                   ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
               <Zap className="w-3 h-3" />
@@ -230,11 +157,11 @@ export function AIChatPage({ setActiveTab }) {
             <button
               type="button"
               onClick={() => handleModeChange('groq')}
-              title="Force Groq Cloud LLM (OpenAI-compatible models)"
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer ${
+              title="Force Groq Cloud LLM"
+              className={`px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1 cursor-pointer ${
                 aiMode === 'groq'
                   ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
               <Sparkles className="w-3 h-3" />
@@ -244,45 +171,78 @@ export function AIChatPage({ setActiveTab }) {
               type="button"
               onClick={() => handleModeChange('local')}
               title="Force Local Math Calculation Engine (Offline)"
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer ${
+              className={`px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1 cursor-pointer ${
                 aiMode === 'local'
                   ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
               <Cpu className="w-3 h-3" />
               <span>Local Math</span>
             </button>
           </div>
+        </div>
+
+        {/* Right: Quick Budget Ticker Pills & Clear */}
+        <div className="flex items-center gap-2 overflow-x-auto">
+          <button
+            onClick={() => setActiveTab && setActiveTab('daily')}
+            title="Click to open Daily Spending Log"
+            className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800/90 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 border border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span>₱{Number(metrics.remaining_today || 0).toLocaleString()} {language === 'tl' ? 'Today' : 'Today'}</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab && setActiveTab('payday')}
+            title="Click to open Payday Simulator"
+            className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800/90 hover:bg-blue-50 dark:hover:bg-blue-950/60 border border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+          >
+            <CalendarDays className="w-3 h-3 text-blue-500" />
+            <span>{metrics.days_until_payday || 0}d {language === 'tl' ? 'Sahod' : 'Payday'}</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab && setActiveTab('obligations')}
+            title="Click to open Bills & Obligations"
+            className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800/90 hover:bg-amber-50 dark:hover:bg-amber-950/60 border border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+          >
+            <Receipt className="w-3 h-3 text-amber-500" />
+            <span>{obligations.filter(o => !o.is_paid).length} {language === 'tl' ? 'Bills' : 'Bills'}</span>
+          </button>
 
           <button
             onClick={handleClear}
-            className="px-3 py-1.5 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-red-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition flex items-center gap-1.5 cursor-pointer"
+            title="Clear Conversation History"
+            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition cursor-pointer flex-shrink-0"
           >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>{t('clear_history_btn')}</span>
+            <Trash2 className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* Chat Conversation Card */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm flex flex-col h-[560px] overflow-hidden">
-        <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-slate-50/50 dark:bg-slate-950/40">
+      {/* 2. Full-Height Message Stream (ChatGPT / Gemini Style) */}
+      <div className="flex-1 overflow-y-auto px-4 py-6">
+        <div className="max-w-3xl mx-auto space-y-6">
           {messages.map((m, idx) => {
             const isUser = m.role === 'user';
             const isGroq = m.engine === 'groq';
-            const isLocal = m.engine === 'local';
             const receipt = m.action_receipt;
+            const content = cleanMessageText(m.message);
+
+            if (!content && !receipt) return null;
 
             return (
-              <div key={idx} className={`flex items-start gap-3 ${isUser ? 'justify-end' : ''}`}>
+              <div key={idx} className={`flex items-start gap-3.5 ${isUser ? 'justify-end' : ''}`}>
                 {!isUser && (
-                  <div className="w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center text-xs font-bold shadow-sm flex-shrink-0 mt-1">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-green-600 to-emerald-500 text-white flex items-center justify-center text-xs font-black shadow-md flex-shrink-0 mt-1">
                     AI
                   </div>
                 )}
-                <div className="max-w-2xl flex flex-col space-y-2">
-                  {/* Engine Identification Tag for Assistant */}
+
+                <div className={`max-w-2xl flex flex-col space-y-2.5 ${isUser ? 'items-end' : 'items-start'}`}>
+                  {/* Engine Tag */}
                   {!isUser && (
                     <div className="flex items-center gap-1.5">
                       {isGroq ? (
@@ -299,21 +259,23 @@ export function AIChatPage({ setActiveTab }) {
                     </div>
                   )}
 
-                  {/* Main Bubble */}
-                  <div className={`p-4 rounded-2xl text-sm leading-relaxed ${
-                    isUser
-                      ? 'bg-green-600 text-white rounded-tr-sm shadow-sm font-medium'
-                      : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded-tl-sm shadow-sm'
-                  }`}>
-                    <div dangerouslySetInnerHTML={{ __html: m.message.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br />') }} />
-                  </div>
+                  {/* Message Bubble */}
+                  {content && (
+                    <div className={`p-4 rounded-2xl text-sm leading-relaxed ${
+                      isUser
+                        ? 'bg-green-600 text-white rounded-tr-sm shadow-md font-medium'
+                        : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 rounded-tl-sm shadow-sm'
+                    }`}>
+                      <div dangerouslySetInnerHTML={{ __html: content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br />') }} />
+                    </div>
+                  )}
 
                   {/* Rich Interactive Action Receipt Cards */}
                   {receipt && receipt.success && (
-                    <div className="animate-in zoom-in-95 duration-200">
+                    <div className="w-full animate-in zoom-in-95 duration-200">
                       {/* Payday Cycle Action Card */}
                       {receipt.action_type === 'record_payday' && (
-                        <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-green-500/10 border border-emerald-500/30 dark:border-emerald-500/40 text-slate-900 dark:text-slate-100 space-y-2.5">
+                        <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-green-500/10 border border-emerald-500/30 dark:border-emerald-500/40 text-slate-900 dark:text-slate-100 space-y-2.5 shadow-sm">
                           <div className="flex items-center justify-between">
                             <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase text-emerald-700 dark:text-emerald-400">
                               <CheckCircle2 className="w-4 h-4" />
@@ -324,11 +286,11 @@ export function AIChatPage({ setActiveTab }) {
                             </span>
                           </div>
                           <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-300">
-                            <div className="bg-white/60 dark:bg-slate-900/60 p-2 rounded-xl border border-emerald-200/50 dark:border-slate-800">
+                            <div className="bg-white/70 dark:bg-slate-900/70 p-2.5 rounded-xl border border-emerald-200/50 dark:border-slate-800">
                               <span className="text-[10px] uppercase font-bold text-slate-400 block">{t('daily_budget_limit')}</span>
                               <strong className="text-sm">₱{Number(receipt.data.daily_budget).toLocaleString()}/day</strong>
                             </div>
-                            <div className="bg-white/60 dark:bg-slate-900/60 p-2 rounded-xl border border-emerald-200/50 dark:border-slate-800">
+                            <div className="bg-white/70 dark:bg-slate-900/70 p-2.5 rounded-xl border border-emerald-200/50 dark:border-slate-800">
                               <span className="text-[10px] uppercase font-bold text-slate-400 block">{t('next_payday_in')}</span>
                               <strong className="text-sm">{receipt.data.next_payday}</strong>
                             </div>
@@ -345,7 +307,7 @@ export function AIChatPage({ setActiveTab }) {
 
                       {/* Log Expense Action Card */}
                       {receipt.action_type === 'log_expense' && (
-                        <div className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs">
+                        <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between text-xs">
                           <div>
                             <p className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                               <span>💸</span>
@@ -358,7 +320,7 @@ export function AIChatPage({ setActiveTab }) {
                           </div>
                           <button
                             onClick={() => setActiveTab && setActiveTab('daily')}
-                            className="px-2.5 py-1.5 bg-white dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg font-bold text-[11px] border border-slate-300 dark:border-slate-600 transition flex items-center gap-1 cursor-pointer"
+                            className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-[11px] border border-slate-200 dark:border-slate-700 transition flex items-center gap-1 cursor-pointer"
                           >
                             <span>{t('daily_view')}</span>
                             <ArrowRight className="w-3 h-3" />
@@ -366,9 +328,9 @@ export function AIChatPage({ setActiveTab }) {
                         </div>
                       )}
 
-                      {/* Add Obligation Action Card */}
+                      {/* Add Obligation / Debt Action Card */}
                       {receipt.action_type === 'add_obligation_or_debt' && (
-                        <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 dark:border-amber-500/40 text-xs flex items-center justify-between">
+                        <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 dark:border-amber-500/40 text-xs flex items-center justify-between shadow-sm">
                           <div>
                             <p className="font-bold text-amber-900 dark:text-amber-300 flex items-center gap-1.5">
                               <span>📋</span>
@@ -381,7 +343,7 @@ export function AIChatPage({ setActiveTab }) {
                           </div>
                           <button
                             onClick={() => setActiveTab && setActiveTab('obligations')}
-                            className="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-[11px] transition flex items-center gap-1 cursor-pointer"
+                            className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-[11px] transition flex items-center gap-1 cursor-pointer"
                           >
                             <span>{t('manage_all')}</span>
                             <ArrowRight className="w-3 h-3" />
@@ -391,7 +353,7 @@ export function AIChatPage({ setActiveTab }) {
 
                       {/* Mark Bill Paid Action Card */}
                       {receipt.action_type === 'mark_bill_paid' && (
-                        <div className="p-3 rounded-2xl bg-green-500/10 border border-green-500/30 text-xs flex items-center justify-between">
+                        <div className="p-3.5 rounded-2xl bg-green-500/10 border border-green-500/30 text-xs flex items-center justify-between shadow-sm">
                           <p className="font-bold text-green-900 dark:text-green-300 flex items-center gap-1.5">
                             <CheckCircle2 className="w-4 h-4 text-green-600" />
                             <span>{receipt.data.name} {language === 'tl' ? 'na-markahan na bayad!' : 'marked as paid!'} (₱{Number(receipt.data.amount_paid).toLocaleString()})</span>
@@ -407,7 +369,7 @@ export function AIChatPage({ setActiveTab }) {
 
                       {/* Savings Deposit Action Card */}
                       {receipt.action_type === 'deposit_to_savings' && (
-                        <div className="p-3 rounded-2xl bg-teal-500/10 border border-teal-500/30 text-xs flex items-center justify-between">
+                        <div className="p-3.5 rounded-2xl bg-teal-500/10 border border-teal-500/30 text-xs flex items-center justify-between shadow-sm">
                           <div>
                             <p className="font-bold text-teal-900 dark:text-teal-300 flex items-center gap-1.5">
                               <span>🏦</span>
@@ -419,7 +381,7 @@ export function AIChatPage({ setActiveTab }) {
                           </div>
                           <button
                             onClick={() => setActiveTab && setActiveTab('savings')}
-                            className="px-2.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-bold text-[11px] transition flex items-center gap-1 cursor-pointer"
+                            className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold text-[11px] transition flex items-center gap-1 cursor-pointer"
                           >
                             <span>{t('savings')}</span>
                             <ArrowRight className="w-3 h-3" />
@@ -444,7 +406,7 @@ export function AIChatPage({ setActiveTab }) {
               <div className="w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center text-xs font-bold shadow-sm flex-shrink-0 animate-pulse">
                 AI
               </div>
-              <div className="p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400 rounded-tl-sm shadow-sm flex items-center gap-2">
+              <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 rounded-tl-sm shadow-sm flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-green-500 animate-bounce"></span>
                 <span className="w-2 h-2 rounded-full bg-green-500 animate-bounce" style={{ animationDelay: '0.2s' }}></span>
                 <span className="w-2 h-2 rounded-full bg-green-500 animate-bounce" style={{ animationDelay: '0.4s' }}></span>
@@ -454,46 +416,52 @@ export function AIChatPage({ setActiveTab }) {
           )}
           <div ref={messagesEndRef} />
         </div>
+      </div>
 
-        {/* Suggestion Chips */}
-        <div className="px-6 py-2 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2 overflow-x-auto">
-          <span className="text-[11px] font-bold text-slate-400 uppercase flex-shrink-0">Quick Actions:</span>
-          {suggestions.map((pill, idx) => (
-            <button
-              key={idx}
-              onClick={() => handleSend(pill)}
-              className="px-3 py-1 bg-green-50 dark:bg-green-950/60 hover:bg-green-100 dark:hover:bg-green-900/60 text-green-700 dark:text-green-300 rounded-full text-xs font-semibold whitespace-nowrap border border-green-200/60 dark:border-green-800/60 transition cursor-pointer"
-            >
-              {pill}
-            </button>
-          ))}
-        </div>
+      {/* 3. Bottom Docked ChatGPT-Style Prompt Container (Always Visible) */}
+      <div className="p-4 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-slate-950 dark:via-slate-950/95 dark:to-transparent z-10 flex-shrink-0">
+        <div className="max-w-3xl mx-auto space-y-2">
+          
+          {/* Quick Action Suggestion Chips */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 select-none">
+            <span className="text-[10px] font-bold text-slate-400 uppercase flex-shrink-0">Quick:</span>
+            {suggestions.map((pill, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleSend(pill)}
+                className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800/80 hover:bg-green-50 dark:hover:bg-green-950/60 hover:border-green-300 dark:hover:border-green-700 text-slate-600 dark:text-slate-300 rounded-full text-[11px] font-semibold whitespace-nowrap border border-slate-200 dark:border-slate-700/60 transition cursor-pointer"
+              >
+                {pill}
+              </button>
+            ))}
+          </div>
 
-        {/* Input Bar */}
-        <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
+          {/* Floating Prompt Bar */}
           <form
             onSubmit={(e) => {
               e.preventDefault();
               handleSend();
             }}
-            className="flex items-center gap-3"
+            className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700/80 rounded-2xl sm:rounded-3xl p-1.5 sm:p-2 shadow-xl focus-within:ring-2 focus-within:ring-green-500 focus-within:border-transparent transition"
           >
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={language === 'tl' ? 'I-chat ang iyong sahod, gastos, utang, o tanong...' : 'Chat your salary, expense, bill, or budget question...'}
-              className="flex-1 px-4 py-3 rounded-2xl border border-slate-300 dark:border-slate-700 text-sm bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-green-500 transition"
+              placeholder={language === 'tl' ? 'I-chat ang sahod, gastos, utang, o budget question...' : 'Chat your salary, expense, bill, or budget question...'}
+              className="flex-1 px-3 sm:px-4 py-2.5 text-sm bg-transparent text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none"
+              autoFocus
             />
             <button
               type="submit"
               disabled={!input.trim()}
-              className="px-5 py-3 rounded-2xl bg-green-600 hover:bg-green-700 text-white font-bold text-sm shadow-md transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+              className="p-2.5 sm:px-4 sm:py-2.5 rounded-xl sm:rounded-2xl bg-green-600 hover:bg-green-700 disabled:opacity-40 text-white font-bold text-sm shadow-md transition flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed flex-shrink-0"
             >
-              <span>Send</span>
+              <span className="hidden sm:inline">Send</span>
               <Send className="w-4 h-4" />
             </button>
           </form>
+
         </div>
       </div>
 

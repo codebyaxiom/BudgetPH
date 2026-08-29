@@ -36,8 +36,10 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  const isAIChat = activeTab === 'ai';
+
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex font-['DM_Sans'] transition-colors duration-200">
+    <div className="h-screen w-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex font-['DM_Sans'] transition-colors duration-200">
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -47,10 +49,10 @@ export default function App() {
         setIsMobileOpen={setIsMobileSidebarOpen}
       />
       
-      <div className="flex-1 flex flex-col min-w-0 transition-all">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden transition-all">
         <Header activeTab={activeTab} onOpenMobileMenu={() => setIsMobileSidebarOpen(true)} />
         
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-8">
+        <main className={`flex-1 min-w-0 ${isAIChat ? 'h-[calc(100vh-4rem)] p-0 overflow-hidden flex flex-col' : 'overflow-y-auto max-w-7xl w-full mx-auto px-4 sm:px-8 py-8'}`}>
           {activeTab === 'ai' && <AIChatPage setActiveTab={setActiveTab} />}
           {activeTab === 'dashboard' && <DashboardPage setActiveTab={setActiveTab} />}
           {activeTab === 'daily' && <DailyPage />}
@@ -60,11 +62,13 @@ export default function App() {
           {activeTab === 'allowances' && <AllowancesPage />}
           {activeTab === 'savings' && <SavingsPage />}
           {activeTab === 'settings' && <SettingsPage />}
-        </main>
 
-        <footer className="py-6 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-center text-xs text-slate-400 dark:text-slate-500 transition-colors duration-200">
-          <p>BudgetPH v2.0 · Pinoy AI Budget Assistant · React 19 + Express</p>
-        </footer>
+          {!isAIChat && (
+            <footer className="mt-12 py-6 border-t border-slate-200 dark:border-slate-800 text-center text-xs text-slate-400 dark:text-slate-500">
+              <p>BudgetPH v2.0 · Pinoy AI Budget Assistant · React 19 + Express</p>
+            </footer>
+          )}
+        </main>
       </div>
 
       <LogExpenseModal />
