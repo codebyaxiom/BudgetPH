@@ -197,6 +197,65 @@ export const aiToolDefinitions = [
         required: ['name', 'amount', 'period']
       }
     }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'add_to_wishlist',
+      description: 'Saves a non-essential want, impulse purchase, or item to the Wants/Wishlist delay buffer to review on payday.',
+      parameters: {
+        type: 'object',
+        properties: {
+          name: {
+            type: 'string',
+            description: 'Name of the item or want (e.g. "Nike Air Max", "Mechanical Keyboard", "Steam Game")'
+          },
+          estimated_amount: {
+            type: 'number',
+            description: 'Estimated price/cost in PHP'
+          },
+          priority: {
+            type: 'string',
+            enum: ['high', 'medium', 'low'],
+            description: 'Priority level (high, medium, or low)'
+          },
+          notes: {
+            type: 'string',
+            description: 'Why you want it or any special notes'
+          }
+        },
+        required: ['name', 'estimated_amount']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'evaluate_wants_affordability',
+      description: 'Evaluates all pending items in the user Wants & Wishlist buffer against their current cycle spendable surplus, bills, and days until next payday, returning which items they can safely buy now vs. wait.',
+      parameters: {
+        type: 'object',
+        properties: {},
+        required: []
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'buy_wishlist_item',
+      description: 'Marks a saved wishlist item as purchased and automatically logs it as a daily expense.',
+      parameters: {
+        type: 'object',
+        properties: {
+          item_name: {
+            type: 'string',
+            description: 'Name or keyword of the wishlist item to mark purchased'
+          }
+        },
+        required: ['item_name']
+      }
+    }
   }
 ];
 
@@ -542,6 +601,114 @@ export async function executeAiTool(name, args, userId = 1) {
             amount: numAmt,
             period,
             notes
+          }
+        };
+      }
+
+      case 'add_to_wishlist': {
+        const { name, estimated_amount, priority = 'medium', notes = '' } = args;
+        const numAmt = parseFloat(estimated_amount);
+
+        const [ins] = await pool.query(
+          `INSERT INTO wishlist_items (user_id, name, estimated_amount, priority, status, notes)
+           VALUES (?, ?, ?, ?, 'pending', ?)`,
+          [userId, name, numAmt, priority, notes]
+        );
+
+        return {
+          success: true,
+          action_type: 'add_to_wishlist',
+          summary: `Added "${name}" (₱${numAmt.toLocaleString()}) [${priority.toUpperCase()} priority] to your Wants & Wishlist buffer.`,
+          data: {
+            wishlist_id: ins.insertId,
+            name,
+            estimated_amount: numAmt,
+            priority,
+            notes
+          }
+        };
+      }
+
+      case 'evaluate_wants_affordability': {
+        const metrics = await getCycleBudgetMetrics(userId);
+        const [items] = await pool.query(
+          `SELECT * FROM wishlist_items WHERE user_id = ? AND status = 'pending' ORDER BY FIELD(priority, 'high', 'medium', 'low'), estimated_amount ASC`,
+          [userId]
+        );
+
+        let spendablePool = metrics.spendable_remaining;
+        const affordableItems = [];
+        const waitItems = [];
+
+        for (const item of items) {
+          const cost = parseFloat(item.estimated_amount);
+          if (cost <= spendablePool) {
+            affordableItems.push({ ...item, cost });
+            spendablePool -= cost;
+          } else {
+            waitItems.push({ ...item, cost });
+          }
+        }
+
+        return {
+          success: true,
+          action_type: 'evaluate_wants_affordability',
+          summary: `Evaluated ${items.length} wishlist items. ${affordableItems.length} affordable now, ${waitItems.length} recommended to wait.`,
+          data: {
+            spendable_remaining: metrics.spendable_remaining,
+            daily_budget: metrics.daily_budget,
+            days_until_payday: metrics.days_until_payday,
+            affordable_items: affordableItems,
+            wait_items: waitItems,
+            total_pending: items.length
+          }
+        };
+      }
+
+      case 'buy_wishlist_item': {
+        const queryName = (args.item_name || '').toLowerCase().trim();
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        const [items] = await pool.query(
+          `SELECT * FROM wishlist_items WHERE user_id = ? AND status = 'pending' AND LOWER(name) LIKE ? LIMIT 1`,
+          [userId, `%${queryName}%`]
+        );
+
+        if (items.length === 0) {
+          return {
+            success: false,
+            action_type: 'buy_wishlist_item',
+            summary: `No pending wishlist item found matching "${args.item_name}".`
+          };
+        }
+
+        const target = items[0];
+        await pool.query(
+          `UPDATE wishlist_items SET status = 'purchased', purchased_at = CURRENT_TIMESTAMP WHERE id = ?`,
+          [target.id]
+        );
+
+        // Find active cycle and log expense
+        const [cycles] = await pool.query("SELECT id FROM payday_cycles WHERE user_id = ? AND status = 'active' LIMIT 1", [userId]);
+        const cycleId = cycles[0]?.id || null;
+
+        await pool.query(
+          `INSERT INTO expenses (user_id, payday_cycle_id, amount, description, category, mood, expense_date)
+           VALUES (?, ?, ?, ?, 'entertainment', 'want', ?)`,
+          [userId, cycleId, target.estimated_amount, `Wishlist: ${target.name}`, todayStr]
+        );
+
+        const updatedMetrics = await getCycleBudgetMetrics(userId);
+
+        return {
+          success: true,
+          action_type: 'buy_wishlist_item',
+          summary: `Marked "${target.name}" (₱${parseFloat(target.estimated_amount).toLocaleString()}) as purchased and logged under Wants!`,
+          data: {
+            wishlist_id: target.id,
+            name: target.name,
+            amount: parseFloat(target.estimated_amount),
+            remaining_today: updatedMetrics.remaining_today
           }
         };
       }

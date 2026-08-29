@@ -58,6 +58,12 @@ export const deleteFamilyMember = (id) => request(`/allowances/member/${id}`, { 
 export const saveAllowance = (payload) => request('/allowances/save', { method: 'POST', body: payload });
 export const deleteAllowance = (id) => request(`/allowances/${id}`, { method: 'DELETE' });
 
+// Wishlist & Wants Delay Buffer
+export const fetchWishlist = () => request('/wishlist');
+export const addWishlistItem = (payload) => request('/wishlist', { method: 'POST', body: payload });
+export const buyWishlistItem = (id, logAsExpense = true) => request(`/wishlist/${id}/purchase`, { method: 'POST', body: { log_as_expense: logAsExpense } });
+export const deleteWishlistItem = (id) => request(`/wishlist/${id}`, { method: 'DELETE' });
+
 // Savings & Goals
 export const fetchSavings = () => request('/savings');
 export const createSavingsGoal = (payload) => request('/savings', { method: 'POST', body: payload });

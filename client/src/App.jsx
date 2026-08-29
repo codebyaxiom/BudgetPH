@@ -10,6 +10,7 @@ import { PaydayPage } from './pages/PaydayPage';
 import { ObligationsPage } from './pages/ObligationsPage';
 import { AllowancesPage } from './pages/AllowancesPage';
 import { SavingsPage } from './pages/SavingsPage';
+import { WishlistPage } from './pages/WishlistPage';
 import { AIChatPage } from './pages/AIChatPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { useBudgetStore } from './stores/useBudgetStore';
@@ -60,6 +61,7 @@ export default function App() {
           {activeTab === 'payday' && <PaydayPage setActiveTab={setActiveTab} />}
           {activeTab === 'obligations' && <ObligationsPage />}
           {activeTab === 'allowances' && <AllowancesPage />}
+          {activeTab === 'wishlist' && <WishlistPage />}
           {activeTab === 'savings' && <SavingsPage />}
           {activeTab === 'settings' && <SettingsPage />}
 

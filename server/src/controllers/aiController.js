@@ -21,6 +21,10 @@ export async function getUserFinancialSnapshot(userId = 1) {
     'SELECT SUM(current_amount) as total_savings FROM savings_goals WHERE user_id = ? AND is_active = 1',
     [userId]
   );
+  const [wishlistRows] = await pool.query(
+    "SELECT name, estimated_amount, priority FROM wishlist_items WHERE user_id = ? AND status = 'pending' ORDER BY FIELD(priority, 'high', 'medium', 'low')",
+    [userId]
+  );
   const [userRows] = await pool.query('SELECT name FROM users WHERE id = ?', [userId]);
   const [incomeRows] = await pool.query('SELECT frequency, payday_1, payday_2 FROM income_sources WHERE user_id = ? AND is_active = 1 LIMIT 1', [userId]);
 
@@ -35,6 +39,8 @@ export async function getUserFinancialSnapshot(userId = 1) {
     pending_obligations: obligations[0]?.total || 0,
     total_obligations_amount: obligations[0]?.sum_amount || 0,
     active_bills_summary: obsList.map(o => `${o.name} (₱${Number(o.amount).toLocaleString()})`).join(', ') || 'None yet',
+    pending_wishlist_count: wishlistRows.length,
+    wishlist_summary: wishlistRows.map(w => `${w.name} (₱${Number(w.estimated_amount).toLocaleString()} [${w.priority}])`).join(', ') || 'No saved wants yet',
     total_savings: savings[0]?.total_savings || 0,
     cycle_payday_date: cycle?.payday_date,
     cycle_next_payday: cycle?.next_payday_date
@@ -139,6 +145,9 @@ Tool Guidelines:
 5. 'mark_bill_paid': Call when user mentions they paid a bill (e.g. "Nabayaran ko na kuryente").
 6. 'deposit_to_savings': Call when user puts money into emergency fund or savings.
 7. 'add_family_allowance': Call when adding a child or family dependent's regular allowance/baon to the budget.
+8. 'add_to_wishlist': Call when user considers buying something non-essential or wants to save an item to their wants/wishlist buffer to review on payday (e.g. "Gusto ko bilhin yung sapatos ₱2,500 pero ipon muna").
+9. 'evaluate_wants_affordability': Call when user asks what wants/wishlist items they can afford this payday or cycle (e.g. "Anong wants ang pwede ko nang bilhin ngayong sahod?").
+10. 'buy_wishlist_item': Call when user actually buys a saved wishlist item (e.g. "Binili ko na yung sapatos sa wishlist").
 
 Language Guidelines:
 - If the user talks or prompts in Tagalog / Taglish, respond naturally in warm Taglish (mix of English & Tagalog).
@@ -154,6 +163,7 @@ Live Financial Context:
 - Days until Next Payday: ${snapshot.days_until_payday} days
 - Total Cycle Spendable Remaining: ₱${snapshot.spendable_remaining}
 - Active Registered Bills: ${snapshot.active_bills_summary}
+- Saved Wants in Wishlist (${snapshot.pending_wishlist_count}): ${snapshot.wishlist_summary}
 - Total Obligations Amount: ₱${snapshot.total_obligations_amount}
 - Current Savings: ₱${snapshot.total_savings}
 

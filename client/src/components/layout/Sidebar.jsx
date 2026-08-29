@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, CalendarDays, Receipt, Wallet, Users, Bot, TrendingUp, ShieldCheck, Settings, PanelLeftClose, Sparkles } from 'lucide-react';
+import { LayoutDashboard, CalendarDays, Receipt, Wallet, Users, Bot, TrendingUp, ShieldCheck, ShoppingBag, Settings, PanelLeftClose, Sparkles } from 'lucide-react';
 import { useBudgetStore } from '../../stores/useBudgetStore';
 import { useLanguageStore } from '../../stores/useLanguageStore';
 
@@ -29,6 +29,7 @@ export function Sidebar({ activeTab, setActiveTab, isCollapsed, setIsCollapsed, 
         { id: 'payday', label: t('payday'), icon: CalendarDays },
         { id: 'obligations', label: t('obligations'), icon: Receipt },
         { id: 'allowances', label: t('allowances'), icon: Users },
+        { id: 'wishlist', label: t('wishlist'), icon: ShoppingBag },
         { id: 'savings', label: t('savings'), icon: ShieldCheck },
       ]
     },
