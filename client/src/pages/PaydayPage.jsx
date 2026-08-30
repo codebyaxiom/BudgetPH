@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { CalendarDays, CheckCircle } from 'lucide-react';
 import * as api from '../services/api';
 import { useBudgetStore } from '../stores/useBudgetStore';
@@ -63,7 +63,7 @@ export function PaydayPage({ setActiveTab }) {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-300">
+    <div className="space-y-6 animate-in fade-in duration-300">
       <div>
         <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-50 font-['Plus_Jakarta_Sans']">
           Payday Simulator 2.0 📅
@@ -73,7 +73,7 @@ export function PaydayPage({ setActiveTab }) {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-4">
           <h3 className="text-base font-bold text-slate-900 dark:text-slate-50 font-['Plus_Jakarta_Sans']">Sahod & Petsa</h3>
           

@@ -53,7 +53,7 @@ export default function App() {
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden transition-all">
         <Header activeTab={activeTab} onOpenMobileMenu={() => setIsMobileSidebarOpen(true)} />
         
-        <main className={`flex-1 min-w-0 ${isAIChat ? 'h-[calc(100vh-4rem)] p-0 overflow-hidden flex flex-col' : 'overflow-y-auto max-w-7xl w-full mx-auto px-4 sm:px-8 py-8'}`}>
+        <main className={`flex-1 min-w-0 ${isAIChat ? 'h-[calc(100vh-4rem)] p-0 overflow-hidden flex flex-col' : 'overflow-y-auto max-w-7xl w-full mx-auto px-4 sm:px-8 py-6'}`}>
           {activeTab === 'ai' && <AIChatPage setActiveTab={setActiveTab} />}
           {activeTab === 'dashboard' && <DashboardPage setActiveTab={setActiveTab} />}
           {activeTab === 'daily' && <DailyPage />}
@@ -64,12 +64,6 @@ export default function App() {
           {activeTab === 'wishlist' && <WishlistPage />}
           {activeTab === 'savings' && <SavingsPage />}
           {activeTab === 'settings' && <SettingsPage />}
-
-          {!isAIChat && (
-            <footer className="mt-12 py-6 border-t border-slate-200 dark:border-slate-800 text-center text-xs text-slate-400 dark:text-slate-500">
-              <p>BudgetPH v2.0 · Pinoy AI Budget Assistant · React 19 + Express</p>
-            </footer>
-          )}
         </main>
       </div>
 

@@ -52,7 +52,7 @@ export function DailyPage() {
   const expenses = dailyData?.todayExpenses || [];
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-300">
+    <div className="space-y-6 animate-in fade-in duration-300">
       <div>
         <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-50 font-['Plus_Jakarta_Sans']">
           {t('daily_header')}
