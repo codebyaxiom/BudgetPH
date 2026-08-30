@@ -189,7 +189,7 @@ export function ObligationsPage() {
                       <span className="text-2xl font-black font-['Plus_Jakarta_Sans'] text-slate-900 dark:text-slate-50 tracking-tight">
                         ₱{Number(ob.amount).toLocaleString()}
                       </span>
-                      {ob.is_variable && (
+                      {Boolean(ob.is_variable) && (
                         <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 text-[10px] font-bold rounded-full border border-purple-200 dark:border-purple-800">
                           {isTL ? 'Pabago-bago' : 'Variable Est.'}
                         </span>
