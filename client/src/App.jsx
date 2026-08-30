@@ -51,7 +51,7 @@ export default function App() {
       />
       
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden transition-all">
-        <Header activeTab={activeTab} onOpenMobileMenu={() => setIsMobileSidebarOpen(true)} />
+        <Header activeTab={activeTab} setActiveTab={setActiveTab} onOpenMobileMenu={() => setIsMobileSidebarOpen(true)} />
         
         <main className={`flex-1 min-w-0 ${isAIChat ? 'h-[calc(100vh-4rem)] p-0 overflow-hidden flex flex-col' : 'overflow-y-auto max-w-7xl w-full mx-auto px-4 sm:px-8 py-6'}`}>
           {activeTab === 'ai' && <AIChatPage setActiveTab={setActiveTab} />}

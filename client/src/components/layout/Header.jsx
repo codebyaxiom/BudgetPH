@@ -4,7 +4,7 @@ import { useBudgetStore } from '../../stores/useBudgetStore';
 import { useThemeStore } from '../../stores/useThemeStore';
 import { useLanguageStore } from '../../stores/useLanguageStore';
 
-export function Header({ activeTab, onOpenMobileMenu }) {
+export function Header({ activeTab, onOpenMobileMenu, setActiveTab }) {
   const { dashboardData, openExpenseModal } = useBudgetStore();
   const { theme, toggleTheme } = useThemeStore();
   const { language, setLanguage, toggleLanguage, t } = useLanguageStore();
@@ -17,6 +17,7 @@ export function Header({ activeTab, onOpenMobileMenu }) {
     payday: t('payday'),
     obligations: t('obligations'),
     allowances: t('allowances'),
+    wishlist: t('wishlist'),
     savings: t('savings'),
     ai: t('ai_advisor'),
     settings: t('settings'),
@@ -40,10 +41,16 @@ export function Header({ activeTab, onOpenMobileMenu }) {
 
       <div className="flex items-center gap-2.5 sm:gap-3">
         {activeCycle && (
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 rounded-full text-xs font-semibold text-emerald-800 dark:text-emerald-300 shadow-sm">
+          <button
+            onClick={() => setActiveTab && setActiveTab('payday')}
+            title={language === 'tl' 
+              ? `Aktibong Sahod Cut-off: ₱${Number(activeCycle.expected_amount).toLocaleString()} (I-click para sa Payday Simulator)` 
+              : `Active Payday Cut-off: ₱${Number(activeCycle.expected_amount).toLocaleString()} (Click to open Payday Simulator)`}
+            className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100/80 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800/60 rounded-full text-xs font-semibold text-emerald-800 dark:text-emerald-300 shadow-xs transition cursor-pointer"
+          >
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
             <span>{t('active_cycle')}: <strong>₱{Number(activeCycle.expected_amount).toLocaleString()}</strong></span>
-          </div>
+          </button>
         )}
 
         {/* Obvious Language Switcher Pill */}
