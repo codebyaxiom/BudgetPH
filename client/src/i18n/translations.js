@@ -130,7 +130,8 @@ export const translations = {
     // Savings & Emergency Fund
     savings_header: 'Savings & Emergency Fund Tracker 🏦',
     savings_subheader: 'Build your safety net and fund your goals before discretionary spending.',
-    add_savings_goal_btn: '+ Add Savings Goal',
+    add_savings_goal_btn: 'Add Savings Goal',
+    deposit_btn: 'Add Deposit',
     emergency_coverage_months: '{months} Months of Expenses',
     emergency_desc: 'Based on your monthly fixed obligations of ₱{amount}. An ideal safety net is 3 to 6 months.',
     total_saved_all_goals: 'Total Saved Across All Goals:',
@@ -300,7 +301,8 @@ export const translations = {
     // Savings & Emergency Fund
     savings_header: 'Ipon at Emergency Fund Tracker 🏦',
     savings_subheader: 'Palakihin ang iyong emergency safety net at sinking funds para sa mga pangarap.',
-    add_savings_goal_btn: '+ Bagong Target na Ipon',
+    add_savings_goal_btn: 'Bagong Target na Ipon',
+    deposit_btn: 'Mag-ipon / Deposit',
     emergency_coverage_months: '{months} Buwan ng Gastusin',
     emergency_desc: 'Batay sa iyong buwanang fixed bills na ₱{amount}. Ang ideal na emergency fund ay 3 hanggang 6 na buwan.',
     total_saved_all_goals: 'Kabuuang Naipon sa Lahat ng Goals:',
