@@ -6,6 +6,7 @@ import {
 import * as api from '../../services/api';
 import { useBudgetStore } from '../../stores/useBudgetStore';
 import { useLanguageStore } from '../../stores/useLanguageStore';
+import { useFeedbackStore } from '../../stores/useFeedbackStore';
 
 const DEFAULT_BILLS = [
   { id: 'electricity', labelEn: 'Electricity Bill', labelTl: 'Kuryente (Electricity)', category: 'electricity', amount: '', due_day: 18, selected: false, icon: '⚡' },
@@ -19,8 +20,9 @@ const DEFAULT_BILLS = [
 const PRESET_SALARIES = [10000, 15000, 20000, 25000, 30000, 40000];
 
 export function ConversationalOnboardingCard({ onComplete, setActiveTab }) {
-  const { loadDashboard } = useBudgetStore();
   const { language, t } = useLanguageStore();
+  const { loadDashboard } = useBudgetStore();
+  const { showErrorModal } = useFeedbackStore();
   const isTL = language === 'tl';
 
   const [step, setStep] = useState(1); // 1: Name, 2: Salary, 3: Schedule, 4: Bills
@@ -135,7 +137,14 @@ export function ConversationalOnboardingCard({ onComplete, setActiveTab }) {
       }
     } catch (err) {
       console.error('Onboarding submission error:', err);
-      alert(isTL ? `May naganap na error sa pag-setup: ${err.message}` : `Setup error: ${err.message}`);
+      showErrorModal({
+        title: isTL ? 'Hindi Nakumpleto ang Pag-kalkula ng Badyet' : 'Budget Setup Could Not Complete',
+        message: isTL
+          ? 'May naganap na error sa pag-save ng iyong setup sa database. Nakatago pa rin ang lahat ng iyong inilagay na impormasyon para hindi ka na mag-type muli.'
+          : 'An issue occurred while saving your financial profile to the cloud database. Your entered details have been preserved so you do not need to retype anything.',
+        errorDetails: err.message,
+        onRetry: () => handleSubmit()
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -455,10 +464,13 @@ export function ConversationalOnboardingCard({ onComplete, setActiveTab }) {
             <button
               type="submit"
               disabled={isSubmitting || !name.trim()}
-              className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-1.5 cursor-pointer"
+              className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-black text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2 cursor-pointer active:scale-98"
             >
               {isSubmitting ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span className="animate-pulse">{isTL ? 'Kinakalkula ang Badyet... Sandali lang po' : 'Calculating Budget... Please wait'}</span>
+                </>
               ) : (
                 <>
                   <Sparkles className="w-3.5 h-3.5" />

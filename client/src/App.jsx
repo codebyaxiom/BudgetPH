@@ -14,6 +14,7 @@ import { SavingsPage } from './pages/SavingsPage';
 import { WishlistPage } from './pages/WishlistPage';
 import { AIChatPage } from './pages/AIChatPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { GlobalFeedbackModal } from './components/common/GlobalFeedbackModal';
 import { useBudgetStore } from './stores/useBudgetStore';
 
 export default function App() {
@@ -70,6 +71,7 @@ export default function App() {
       </div>
 
       <LogExpenseModal />
+      <GlobalFeedbackModal />
     </div>
   );
 }
