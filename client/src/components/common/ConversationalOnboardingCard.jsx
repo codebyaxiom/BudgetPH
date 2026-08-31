@@ -135,6 +135,7 @@ export function ConversationalOnboardingCard({ onComplete, setActiveTab }) {
       }
     } catch (err) {
       console.error('Onboarding submission error:', err);
+      alert(isTL ? `May naganap na error sa pag-setup: ${err.message}` : `Setup error: ${err.message}`);
     } finally {
       setIsSubmitting(false);
     }

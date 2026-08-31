@@ -15,22 +15,60 @@ if (isPostgres) {
     ssl: { rejectUnauthorized: false }
   });
 
+  const formatPgQuery = (sql) => {
+    let paramIndex = 1;
+    let pgSql = sql.replace(/\?/g, () => `$${paramIndex++}`);
+    
+    // Auto-append RETURNING id for INSERT statements if not present
+    const trimmed = pgSql.trim();
+    if (/^INSERT\s+INTO/i.test(trimmed) && !/RETURNING/i.test(trimmed)) {
+      pgSql += ' RETURNING id';
+    }
+    return pgSql;
+  };
+
+  const processPgResult = (res) => {
+    const insertId = (res && res.rows && res.rows.length > 0 && res.rows[0].id !== undefined)
+      ? res.rows[0].id
+      : (res && res.rows && res.rows.length > 0 && res.rows[0].ID !== undefined ? res.rows[0].ID : null);
+    
+    if (res && res.rows) {
+      res.rows.insertId = insertId;
+      res.rows.affectedRows = res.rowCount || 0;
+    }
+    if (res) {
+      res.insertId = insertId;
+      res.affectedRows = res.rowCount || 0;
+    }
+    return [res.rows, res];
+  };
+
   pool = {
     async query(sql, params = []) {
-      // Replace ? placeholders with $1, $2, $3 for PostgreSQL
-      let paramIndex = 1;
-      const pgSql = sql.replace(/\?/g, () => `$${paramIndex++}`);
+      const pgSql = formatPgQuery(sql);
       const res = await pgPool.query(pgSql, params);
-      return [res.rows, res];
+      return processPgResult(res);
     },
     async getConnection() {
       const client = await pgPool.connect();
       return {
         query: async (sql, params = []) => {
-          let paramIndex = 1;
-          const pgSql = sql.replace(/\?/g, () => `$${paramIndex++}`);
+          const pgSql = formatPgQuery(sql);
           const res = await client.query(pgSql, params);
-          return [res.rows, res];
+          return processPgResult(res);
+        },
+        beginTransaction: async () => {
+          await client.query('BEGIN');
+        },
+        commit: async () => {
+          await client.query('COMMIT');
+        },
+        rollback: async () => {
+          try {
+            await client.query('ROLLBACK');
+          } catch (e) {
+            // ignore rollback error if already closed
+          }
         },
         release: () => client.release()
       };
