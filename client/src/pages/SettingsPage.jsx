@@ -7,6 +7,8 @@ import { useLanguageStore } from '../stores/useLanguageStore';
 export function SettingsPage() {
   const { loadDashboard, openOnboarding } = useBudgetStore();
   const { language, setLanguage, t } = useLanguageStore();
+  const isTL = language === 'tl';
+
   const [data, setData] = useState(null);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -46,7 +48,7 @@ export function SettingsPage() {
         pay_schedule: paySchedule
       });
       await loadDashboard();
-      alert('Profile updated successfully! 🎉');
+      alert(isTL ? 'Matagumpay na na-update ang profile! 🎉' : 'Profile updated successfully! 🎉');
     } catch (err) {
       alert('Error: ' + err.message);
     } finally {
@@ -74,25 +76,64 @@ export function SettingsPage() {
       
       <div>
         <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-50 font-['Plus_Jakarta_Sans']">
-          Settings & Profile ⚙️
+          {isTL ? 'Mga Setting at Profile ⚙️' : 'Settings & Profile ⚙️'}
         </h1>
         <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
-          Pamahalaan ang iyong account profile, salary schedule, at data backup.
+          {isTL ? 'Pamahalaan ang iyong account profile, salary schedule, at data backup.' : 'Manage your account profile, salary schedule, and data backup.'}
         </p>
+      </div>
+
+      {/* Language Preference Card (Top for High Visibility) */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h3 className="text-base font-bold text-slate-900 dark:text-slate-50 font-['Plus_Jakarta_Sans'] flex items-center gap-2">
+            <span className="text-lg">🌐</span>
+            <span>{isTL ? 'Wika / Language' : 'Display Language / Wika'}</span>
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            {isTL ? 'Piliin ang nais mong wika para sa buong application.' : 'Choose your preferred display language for the whole application.'}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => setLanguage('en')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+              language === 'en'
+                ? 'bg-emerald-600 text-white shadow-md'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+            }`}
+          >
+            <span>🇺🇸</span>
+            <span>English (Default)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setLanguage('tl')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+              language === 'tl'
+                ? 'bg-emerald-600 text-white shadow-md'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+            }`}
+          >
+            <span>🇵🇭</span>
+            <span>Tagalog / Filipino</span>
+          </button>
+        </div>
       </div>
 
       {/* Profile Form */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-sm">
         <h3 className="text-base font-bold text-slate-900 dark:text-slate-50 mb-6 font-['Plus_Jakarta_Sans'] flex items-center gap-2">
-          <User className="w-5 h-5 text-green-600" />
-          <span>Personal & Financial Info</span>
+          <User className="w-5 h-5 text-emerald-600" />
+          <span>{isTL ? 'Personal at Pampinansyal na Impormasyon' : 'Personal & Financial Info'}</span>
         </h3>
 
         <form onSubmit={handleSaveProfile} className="space-y-5">
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5">Pangalan</label>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5">{isTL ? 'Pangalan' : 'Full Name'}</label>
               <input
                 type="text"
                 required
@@ -114,39 +155,39 @@ export function SettingsPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5">Civil Status</label>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5">{isTL ? 'Katayuang Sibil' : 'Civil Status'}</label>
               <select
                 value={civilStatus}
                 onChange={(e) => setCivilStatus(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 text-sm"
               >
-                <option value="single">Single</option>
-                <option value="married">Married (May Pamilya)</option>
-                <option value="separated">Separated</option>
-                <option value="widowed">Widowed</option>
+                <option value="single">{isTL ? 'Walang Asawa (Single)' : 'Single'}</option>
+                <option value="married">{isTL ? 'May Asawa / Pamilya (Married)' : 'Married (Family)'}</option>
+                <option value="separated">{isTL ? 'Hiwalay (Separated)' : 'Separated'}</option>
+                <option value="widowed">{isTL ? 'Biyudo / Biyuda (Widowed)' : 'Widowed'}</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5">Base Salary (₱)</label>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5">{isTL ? 'Inaasahang Sahod kada Cut-off (₱)' : 'Salary per Cut-off (₱)'}</label>
               <input
                 type="number"
                 step="0.01"
                 value={salaryAmount}
                 onChange={(e) => setSalaryAmount(e.target.value)}
-                placeholder="30000"
+                placeholder="20000"
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 font-bold text-base"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5">Payday Schedule Frequency</label>
-            <div className="grid grid-cols-3 gap-3">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5">{isTL ? 'Schedule ng Sahod' : 'Payday Schedule Frequency'}</label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {[
-                { id: '15_30', label: '15th & 30th (Kinsenas)', desc: 'Standard Semi-Monthly' },
-                { id: 'bi_weekly', label: 'Bi-Weekly', desc: 'Every 2 Weeks' },
-                { id: 'monthly', label: 'Monthly', desc: 'Once a Month' }
+                { id: '15_30', label: isTL ? '15th & 30th (Kinsenas)' : '15th & 30th (Semi-Monthly)', desc: isTL ? 'Kinsenas at Katapusan' : 'Standard Semi-Monthly' },
+                { id: 'bi_weekly', label: isTL ? 'Kada 2 Linggo' : 'Bi-Weekly', desc: isTL ? 'Kada 14 na araw' : 'Every 2 Weeks' },
+                { id: 'monthly', label: isTL ? 'Kada Buwan' : 'Monthly', desc: isTL ? 'Isang beses kada buwan' : 'Once a Month' }
               ].map(s => (
                 <button
                   type="button"
@@ -154,7 +195,7 @@ export function SettingsPage() {
                   onClick={() => setPaySchedule(s.id)}
                   className={`p-3 rounded-xl border text-left transition cursor-pointer ${
                     paySchedule === s.id
-                      ? 'border-green-600 bg-green-50 dark:bg-green-950/60 text-green-900 dark:text-green-300 font-bold'
+                      ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-300 font-bold'
                       : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300'
                   }`}
                 >
@@ -169,52 +210,13 @@ export function SettingsPage() {
             <button
               type="submit"
               disabled={isSaving}
-              className="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold text-xs rounded-xl shadow-md transition"
+              className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md transition cursor-pointer"
             >
-              {isSaving ? 'Saving...' : 'Save Preferences'}
+              {isSaving ? (isTL ? 'Sine-save...' : 'Saving...') : (isTL ? 'I-save ang Preferences' : 'Save Preferences')}
             </button>
           </div>
 
         </form>
-      </div>
-
-      {/* Language Preference Card */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h3 className="text-base font-bold text-slate-900 dark:text-slate-50 font-['Plus_Jakarta_Sans'] flex items-center gap-2">
-            <span className="text-lg">🌐</span>
-            <span>Language / Wika</span>
-          </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Choose your preferred display language for the whole application.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setLanguage('en')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-              language === 'en'
-                ? 'bg-green-600 text-white shadow-md'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
-            }`}
-          >
-            <span>🇺🇸</span>
-            <span>English (Default)</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setLanguage('tl')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-              language === 'tl'
-                ? 'bg-green-600 text-white shadow-md'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
-            }`}
-          >
-            <span>🇵🇭</span>
-            <span>Tagalog / Taglish</span>
-          </button>
-        </div>
       </div>
 
       {/* Data Backup Card */}
@@ -222,7 +224,7 @@ export function SettingsPage() {
         <div>
           <h3 className="text-base font-bold text-slate-900 dark:text-slate-50 font-['Plus_Jakarta_Sans'] flex items-center gap-2">
             <Download className="w-5 h-5 text-blue-600" />
-            <span>Data Export & Backup</span>
+            <span>{isTL ? 'Pag-export at Backup ng Datos' : 'Data Export & Backup'}</span>
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             {t('backup_card_desc')}
@@ -242,10 +244,12 @@ export function SettingsPage() {
         <div>
           <h3 className="text-base font-bold text-slate-900 dark:text-slate-50 font-['Plus_Jakarta_Sans'] flex items-center gap-2">
             <span className="text-lg">🤖</span>
-            <span>AI Model Training Dataset (SFT / ChatML)</span>
+            <span>{isTL ? 'AI Training Dataset (Taglish SFT / ChatML)' : 'AI Model Training Dataset (SFT / ChatML)'}</span>
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            I-download ang lahat ng aprubadong Taglish budget dialogues at 👍 feedback logs para mag-fine-tune ng custom AI model (Llama 3 / Qwen / Gemma).
+            {isTL 
+              ? 'I-download ang lahat ng aprubadong Taglish budget dialogues at 👍 feedback logs para mag-fine-tune ng custom AI model.' 
+              : 'Download approved bilingual Taglish dialogue pairs and feedback logs for model fine-tuning.'}
           </p>
         </div>
         <button
@@ -267,25 +271,6 @@ export function SettingsPage() {
         >
           <Download className="w-4 h-4 text-emerald-600" />
           <span>Download Dataset (SFT)</span>
-        </button>
-      </div>
-
-      {/* Fast-Track Re-run Card */}
-      <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-slate-900 border border-emerald-200 dark:border-emerald-800/50 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h3 className="text-base font-bold text-slate-900 dark:text-slate-50 font-['Plus_Jakarta_Sans'] flex items-center gap-2">
-            <span className="text-lg">⚡</span>
-            <span>Fast-Track Setup Wizard</span>
-          </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            {t('wizard_card_desc')}
-          </p>
-        </div>
-        <button
-          onClick={() => openOnboarding()}
-          className="px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-2 transition cursor-pointer flex-shrink-0"
-        >
-          <span>Open Setup Wizard</span>
         </button>
       </div>
 

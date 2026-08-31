@@ -42,14 +42,12 @@ export async function completeFastTrackOnboarding(req, res) {
   const connection = await pool.getConnection();
   try {
     const userId = 1;
-    const {
-      name,
-      income_amount,
-      frequency = 'semi-monthly',
-      next_payday_date,
-      bills = [],
-      emergency_fund_contribution = 0
-    } = req.body;
+    const name = req.body.name || 'Ka-Budget';
+    const income_amount = req.body.income_amount || req.body.incomeAmount;
+    const frequency = req.body.frequency || 'semi-monthly';
+    const next_payday_date = req.body.next_payday_date || req.body.nextPaydayDate;
+    const bills = req.body.bills || [];
+    const emergency_fund_contribution = req.body.emergency_fund_contribution || req.body.emergencyAmount || 0;
 
     if (!income_amount || !next_payday_date) {
       return res.status(400).json({
