@@ -478,8 +478,9 @@ export async function executeAiTool(name, args, userId = 1) {
         const currentMonth = new Date().getMonth() + 1;
         const currentYear = new Date().getFullYear();
 
-        let isInstallment = args.is_installment ? 1 : 0;
-        let endMonth = args.end_month ? parseInt(args.end_month, 10) : null;
+        const isLoanOrUtang = category === 'loan' || (name && name.toLowerCase().includes('utang'));
+        let isInstallment = (args.is_installment || isLoanOrUtang) ? 1 : 0;
+        let endMonth = args.end_month ? parseInt(args.end_month, 10) : (isInstallment ? 12 : null);
         let endYear = args.end_year ? parseInt(args.end_year, 10) : currentYear;
         let totalAmount = args.total_amount ? parseFloat(args.total_amount) : null;
         let remainingBalance = null;

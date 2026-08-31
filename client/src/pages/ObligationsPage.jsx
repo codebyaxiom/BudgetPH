@@ -129,10 +129,12 @@ export function ObligationsPage() {
   const currentMonthNum = new Date().getMonth() + 1;
   const currentYearNum = new Date().getFullYear();
 
+  const isInstOb = (o) => Boolean(o.is_installment) || o.category === 'loan' || (o.name && o.name.toLowerCase().includes('utang'));
+
   const overdueBills = obligations.filter(o => !o.is_paid && o.is_active && getBillDueStatus(o.due_day, o.is_paid, language).isOverdue);
   const dueTodayBills = obligations.filter(o => !o.is_paid && o.is_active && getBillDueStatus(o.due_day, o.is_paid, language).isDueToday);
-  const installmentDebts = obligations.filter(o => o.is_installment);
-  const completedDebts = obligations.filter(o => o.status === 'completed' || (!o.is_active && o.is_installment));
+  const installmentDebts = obligations.filter(o => isInstOb(o));
+  const completedDebts = obligations.filter(o => o.status === 'completed' || (!o.is_active && isInstOb(o)));
   const totalOverdueAmount = overdueBills.reduce((sum, o) => sum + parseFloat(o.amount || 0), 0);
 
   const filtered = obligations.filter(o => {
@@ -141,8 +143,8 @@ export function ObligationsPage() {
     if (filter === 'due_soon') return !o.is_paid && o.is_active && dueInfo.isDueSoon;
     if (filter === 'paid') return o.is_paid;
     if (filter === 'pending') return !o.is_paid && o.is_active;
-    if (filter === 'installments') return o.is_installment && o.is_active;
-    if (filter === 'completed') return o.status === 'completed' || (!o.is_active && o.is_installment);
+    if (filter === 'installments') return isInstOb(o) && o.is_active;
+    if (filter === 'completed') return o.status === 'completed' || (!o.is_active && isInstOb(o));
     if (filter === 'variable') return o.is_variable && o.is_active;
     return o.is_active || filter === 'all';
   });
@@ -252,7 +254,8 @@ export function ObligationsPage() {
           {filtered.map(ob => {
             const catLabel = CATEGORY_NAMES[ob.category]?.[language] || ob.category;
             const dueInfo = getBillDueStatus(ob.due_day, ob.is_paid, language);
-            const isCompleted = ob.status === 'completed' || (!ob.is_active && ob.is_installment);
+            const isInstallment = isInstOb(ob);
+            const isCompleted = ob.status === 'completed' || (!ob.is_active && isInstallment);
             
             // Calculate Installment Progress
             const monthlyAmt = parseFloat(ob.monthly_amount || ob.amount);
@@ -260,7 +263,7 @@ export function ObligationsPage() {
             const remBal = ob.remaining_balance !== null && ob.remaining_balance !== undefined ? parseFloat(ob.remaining_balance) : (isCompleted ? 0 : totalAmt);
             const paidAmt = Math.max(0, totalAmt - remBal);
             const progressPct = totalAmt > 0 ? Math.min(100, Math.round((paidAmt / totalAmt) * 100)) : 100;
-            const endMonthName = ob.end_month ? (MONTH_NAMES[language][ob.end_month - 1] || `Month ${ob.end_month}`) : '';
+            const endMonthName = ob.end_month ? (MONTH_NAMES[language][ob.end_month - 1] || `Month ${ob.end_month}`) : (isTL ? 'Disyembre' : 'December');
 
             return (
               <div 
@@ -278,7 +281,7 @@ export function ObligationsPage() {
                     <div>
                       <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base leading-snug flex items-center gap-1.5">
                         <span>{ob.name}</span>
-                        {Boolean(ob.is_installment) && (
+                        {isInstallment && (
                           <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-[10px] font-black rounded-lg border border-amber-300 dark:border-amber-700">
                             {isTL ? 'Hulugan / Utang' : 'Installment'}
                           </span>
@@ -315,7 +318,7 @@ export function ObligationsPage() {
                         ₱{Number(ob.amount).toLocaleString()}
                       </span>
                       <span className="text-xs font-bold text-slate-400">
-                        {Boolean(ob.is_installment) ? (isTL ? '/ buwan' : '/ month') : ''}
+                        {isInstallment ? (isTL ? '/ buwan' : '/ month') : ''}
                       </span>
                       {Boolean(ob.is_variable) && (
                         <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 text-[10px] font-bold rounded-full border border-purple-200 dark:border-purple-800">
@@ -325,7 +328,7 @@ export function ObligationsPage() {
                     </div>
 
                     {/* Installment Term & Balance Progress Card */}
-                    {Boolean(ob.is_installment) && (
+                    {isInstallment && (
                       <div className="p-3 bg-slate-50 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700/60 rounded-xl space-y-1.5">
                         <div className="flex justify-between items-center text-[11px] font-bold text-slate-600 dark:text-slate-300">
                           <span>
@@ -387,7 +390,7 @@ export function ObligationsPage() {
                       }`}
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>{Boolean(ob.is_installment) ? (isTL ? 'Magbayad / Advance' : 'Record / Advance Pay') : (isTL ? 'I-marka na Bayad' : 'Mark as Paid')}</span>
+                      <span>{isInstallment ? (isTL ? 'Magbayad / Advance' : 'Record / Advance Pay') : (isTL ? 'I-marka na Bayad' : 'Mark as Paid')}</span>
                     </button>
                   )}
 
