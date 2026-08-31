@@ -708,6 +708,50 @@ export function AIChatPage({ setActiveTab }) {
                         </div>
                       )}
 
+                      {/* Delete Obligation Action Card */}
+                      {receipt.action_type === 'delete_obligation' && (
+                        <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-xs flex items-center justify-between shadow-sm">
+                          <div>
+                            <p className="font-bold text-rose-900 dark:text-rose-300 flex items-center gap-1.5">
+                              <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                              <span>{receipt.data.name} {isTL ? 'natanggal na sa listahan' : 'removed from obligations'}</span>
+                            </p>
+                            <p className="text-[10px] text-rose-700/80 dark:text-rose-400/80 mt-0.5">
+                              {isTL ? 'Hindi na ito lalabas sa iyong mga bayarin.' : 'This obligation has been cleared from active bills.'}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => setActiveTab && setActiveTab('obligations')}
+                            className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-[11px] transition flex items-center gap-1 cursor-pointer"
+                          >
+                            <span>{t('obligations')}</span>
+                            <ArrowRight className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Waive / Forgive Debt Action Card */}
+                      {receipt.action_type === 'waive_or_forgive_debt' && (
+                        <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-xs flex items-center justify-between shadow-sm">
+                          <div>
+                            <p className="font-bold text-emerald-900 dark:text-emerald-300 flex items-center gap-1.5">
+                              <span>🕊️</span>
+                              <span>{receipt.data.name} {isTL ? 'Pinatawad / Na-waive na!' : 'Debt Forgiven / Waived!'}</span>
+                            </p>
+                            <p className="text-[10px] text-emerald-700/80 dark:text-emerald-400/80 mt-0.5">
+                              {isTL ? 'Walang natitirang balanse (₱0 balance).' : 'Remaining balance cleared to ₱0.'}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => setActiveTab && setActiveTab('obligations')}
+                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-[11px] transition flex items-center gap-1 cursor-pointer"
+                          >
+                            <span>{t('obligations')}</span>
+                            <ArrowRight className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
+
                       {/* Savings Deposit Action Card */}
                       {receipt.action_type === 'deposit_to_savings' && (
                         <div className="p-3.5 rounded-2xl bg-teal-500/10 border border-teal-500/30 text-xs flex items-center justify-between shadow-sm">

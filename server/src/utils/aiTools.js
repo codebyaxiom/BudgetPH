@@ -92,13 +92,13 @@ export const aiToolDefinitions = [
     type: 'function',
     function: {
       name: 'add_obligation_or_debt',
-      description: 'Adds a recurring monthly bill, loan, installment debt/utang owed to someone, or pautang lent to others. If due_day is not specified by the user, immediately call this function with due_day=15.',
+      description: 'Adds a new recurring bill, utility (electricity/water), installment debt, or pautang receivable. ALWAYS call this tool immediately whenever the user mentions adding, creating, or recording a new bill, debt, loan, purchase installment, or money lent to someone.',
       parameters: {
         type: 'object',
         properties: {
           name: {
             type: 'string',
-            description: 'Name of the bill, person, or creditor (e.g. "Meralco Electric Bill", "Utang kay Aunt Maria", "SSS Loan", "Wifi")'
+            description: 'Name of the obligation, utility company, or debt/creditor'
           },
           amount: {
             type: 'number',
@@ -133,9 +133,15 @@ export const aiToolDefinitions = [
             type: 'number',
             description: 'Target due year (e.g. 2026)'
           },
-          is_variable: {
-            type: 'boolean',
-            description: 'True if amount changes every month (e.g. Electricity, Water)'
+          debt_type: {
+            type: 'string',
+            enum: ['payable', 'receivable'],
+            description: 'payable for debt owed by user to someone (Utang), or receivable for money lent by user to someone to be collected (Pautang).'
+          },
+          cutoff_assignment: {
+            type: 'string',
+            enum: ['1st_cutoff', '2nd_cutoff', 'split', 'auto'],
+            description: 'Which sahod cutoff to deduct this bill from (e.g. split for 50% on 15th and 50% on 30th).'
           },
           notes: {
             type: 'string',
@@ -150,7 +156,7 @@ export const aiToolDefinitions = [
     type: 'function',
     function: {
       name: 'update_obligation',
-      description: 'Updates, edits, or adjusts an existing bill, variable utility (electricity/water), or installment debt (e.g. modify amount, due day, end month/year, or toggle variable status).',
+      description: 'Updates, edits, or adjusts an existing bill, variable utility (electricity/water), or installment debt (e.g. arrival of exact bill amount like ₱1,845.50, due date changes, or splitting across cutoffs). ALWAYS call this tool when user provides updated numbers or terms for an existing bill.',
       parameters: {
         type: 'object',
         properties: {
@@ -199,17 +205,55 @@ export const aiToolDefinitions = [
     type: 'function',
     function: {
       name: 'mark_bill_paid',
-      description: 'Marks an existing bill or obligation as paid for the current month/cycle.',
+      description: 'Marks an existing bill or obligation as paid for the current month/cycle, records a partial payment (e.g. paying ₱1,500 of ₱3,000 bill), or pays off remaining balance. ALWAYS call this tool when user reports having paid money towards a bill or debt.',
       parameters: {
         type: 'object',
         properties: {
           bill_name: {
             type: 'string',
-            description: 'Name or keyword of the bill (e.g. "Meralco", "Internet", "Rent")'
+            description: 'Name or keyword of the bill (e.g. "Meralco", "Internet", "Rent", "Utang Aunt Maria")'
           },
           amount_paid: {
             type: 'number',
-            description: 'Amount paid in PHP (defaults to obligation amount if omitted)'
+            description: 'Amount paid in PHP (can be full amount, advance payment, or partial payment)'
+          }
+        },
+        required: ['bill_name']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'delete_obligation',
+      description: 'Deletes, removes, or cancels an obligation or bill from the list. ALWAYS call this tool when user asks to remove/delete/cancel a bill from their active list.',
+      parameters: {
+        type: 'object',
+        properties: {
+          bill_name: {
+            type: 'string',
+            description: 'Name or keyword of the bill/debt to delete'
+          }
+        },
+        required: ['bill_name']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'waive_or_forgive_debt',
+      description: 'Marks a debt as forgiven, waived, or written off by the creditor with 0 remaining balance. ALWAYS call this tool when user mentions that a debt was forgiven or waived by the creditor.',
+      parameters: {
+        type: 'object',
+        properties: {
+          bill_name: {
+            type: 'string',
+            description: 'Name of the debt/creditor'
+          },
+          notes: {
+            type: 'string',
+            description: 'Reason for forgiveness'
           }
         },
         required: ['bill_name']
@@ -611,34 +655,41 @@ export async function executeAiTool(name, args, userId = 1) {
           ? `${dueYear}-${String(dueMonth).padStart(2, '0')}-${String(dueDay).padStart(2, '0')}` 
           : null;
 
+        const debtType = args.debt_type || (name.toLowerCase().includes('pinautang') || name.toLowerCase().includes('pautang') || notes.toLowerCase().includes('pinautang') ? 'receivable' : 'payable');
+        const cutoffAssignment = args.cutoff_assignment || (notes.toLowerCase().includes('hatiin') || notes.toLowerCase().includes('split') ? 'split' : 'auto');
+
         const [res] = await pool.query(
           `INSERT INTO obligations (
             user_id, name, amount, category, due_day, cutoff_assignment, is_variable, is_active, notes,
             is_installment, total_amount, remaining_balance, monthly_amount, end_month, end_year,
-            due_month, due_year, due_date, status
+            due_month, due_year, due_date, debt_type, status
           )
-          VALUES (?, ?, ?, ?, ?, 'auto', ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
+          VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
           [
-            userId, name, amount, category, dueDay, isVariable, notes,
+            userId, name, amount, category, dueDay, cutoffAssignment, isVariable, notes,
             isInstallment, totalAmount, remainingBalance, amount, endMonth, endYear,
-            dueMonth, dueYear, dueDate
+            dueMonth, dueYear, dueDate, debtType
           ]
         );
 
         return {
           success: true,
           action_type: 'add_obligation_or_debt',
-          summary: isInstallment
-            ? `Added installment debt: ${name} (₱${amount.toLocaleString()}/mo until ${endMonth}/${endYear}).`
-            : isVariable
-              ? `Added variable utility: ${name} (Estimated ₱${amount.toLocaleString()}/mo based on previous bills).`
-              : `Added obligation: ${name} (₱${amount.toLocaleString()}) due every ${dueDay}th.`,
+          summary: debtType === 'receivable'
+            ? `Added pautang (collectible): ${name} (₱${amount.toLocaleString()} due on ${dueMonth || 'next month'}/${dueDay}).`
+            : isInstallment
+              ? `Added installment debt: ${name} (₱${amount.toLocaleString()}/mo until ${endMonth}/${endYear}).`
+              : isVariable
+                ? `Added variable utility: ${name} (Estimated ₱${amount.toLocaleString()}/mo based on previous bills).`
+                : `Added obligation: ${name} (₱${amount.toLocaleString()}) due every ${dueDay}th.`,
           data: {
             obligation_id: res.insertId,
             name,
             amount,
             due_day: dueDay,
             category,
+            debt_type: debtType,
+            cutoff_assignment: cutoffAssignment,
             is_variable: Boolean(isVariable),
             is_estimated: isEstimated,
             is_installment: Boolean(isInstallment),
@@ -647,6 +698,76 @@ export async function executeAiTool(name, args, userId = 1) {
             total_amount: totalAmount,
             remaining_balance: remainingBalance
           }
+        };
+      }
+
+      case 'delete_obligation': {
+        const rawBill = (args.bill_name || '').toLowerCase().trim();
+        const [allObs] = await pool.query(
+          `SELECT * FROM obligations WHERE user_id = ? AND is_active = 1`,
+          [userId]
+        );
+
+        let target = allObs.find(o => {
+          const oName = o.name.toLowerCase();
+          return oName.includes(rawBill) || rawBill.includes(oName);
+        });
+
+        if (!target) {
+          return {
+            success: false,
+            action_type: 'delete_obligation',
+            summary: `Could not find an active bill or debt matching "${args.bill_name}".`,
+            data: { bill_name: args.bill_name }
+          };
+        }
+
+        await pool.query(
+          `UPDATE obligations SET is_active = 0, status = 'deleted' WHERE id = ? AND user_id = ?`,
+          [target.id, userId]
+        );
+
+        return {
+          success: true,
+          action_type: 'delete_obligation',
+          summary: `Successfully removed "${target.name}" from your active bills list.`,
+          data: { obligation_id: target.id, name: target.name }
+        };
+      }
+
+      case 'waive_or_forgive_debt': {
+        const rawBill = (args.bill_name || '').toLowerCase().trim();
+        const [allObs] = await pool.query(
+          `SELECT * FROM obligations WHERE user_id = ? AND is_active = 1`,
+          [userId]
+        );
+
+        let target = allObs.find(o => {
+          const oName = o.name.toLowerCase();
+          return oName.includes(rawBill) || rawBill.includes(oName);
+        });
+
+        if (!target) {
+          return {
+            success: false,
+            action_type: 'waive_or_forgive_debt',
+            summary: `Could not find an active debt matching "${args.bill_name}".`,
+            data: { bill_name: args.bill_name }
+          };
+        }
+
+        await pool.query(
+          `UPDATE obligations 
+           SET is_active = 0, remaining_balance = 0, status = 'forgiven', notes = CONCAT(COALESCE(notes, ''), ' [Pinatawad/Waived by creditor]') 
+           WHERE id = ? AND user_id = ?`,
+          [target.id, userId]
+        );
+
+        return {
+          success: true,
+          action_type: 'waive_or_forgive_debt',
+          summary: `Marked debt "${target.name}" as forgiven/waived! Remaining balance is now ₱0.`,
+          data: { obligation_id: target.id, name: target.name, remaining_balance: 0, status: 'forgiven' }
         };
       }
 
@@ -689,6 +810,9 @@ export async function executeAiTool(name, args, userId = 1) {
           const totalMonths = Math.max(1, (newEndYear - currentYear) * 12 + (newEndMonth - currentMonth) + 1);
           totalAmount = totalMonths * newAmount;
           remainingBalance = totalAmount;
+        } else if (!newIsInstallment) {
+          totalAmount = newAmount;
+          remainingBalance = newAmount;
         }
 
         await pool.query(
@@ -698,7 +822,7 @@ export async function executeAiTool(name, args, userId = 1) {
            WHERE id = ? AND user_id = ?`,
           [
             newName, newAmount, newDueDay, newCategory, newIsVariable, newIsInstallment,
-            newEndMonth, newEndYear, totalAmount, remainingBalance, newAmount,
+            newIsInstallment ? newEndMonth : null, newIsInstallment ? newEndYear : null, totalAmount, remainingBalance, newAmount,
             target.id, userId
           ]
         );
@@ -775,6 +899,7 @@ export async function executeAiTool(name, args, userId = 1) {
           };
         }
 
+        const billTotalAmount = parseFloat(target.amount);
         const monthlyAmt = parseFloat(target.monthly_amount || target.amount);
         const finalPaymentAmt = amountPaid > 0 ? amountPaid : monthlyAmt;
         const monthsCovered = monthlyAmt > 0 ? Math.max(1, Math.round(finalPaymentAmt / monthlyAmt)) : 1;
@@ -784,6 +909,14 @@ export async function executeAiTool(name, args, userId = 1) {
         let newEndYear = target.end_year;
         let newStatus = target.status || 'active';
         let newIsActive = target.is_active;
+
+        const isPartial = !target.is_installment && finalPaymentAmt < billTotalAmount;
+        let newPartialPaid = (parseFloat(target.partial_paid_amount || 0)) + finalPaymentAmt;
+        let isFullySettled = false;
+
+        if (isPartial) {
+          newStatus = 'partially_paid';
+        }
 
         // Advance payment shifting logic:
         if (target.is_installment && target.end_month && target.end_year && monthsCovered > 1) {
@@ -796,16 +929,19 @@ export async function executeAiTool(name, args, userId = 1) {
         }
 
         // Auto-complete if balance is 0 or end date reached
-        if (target.is_installment && (newBalance === 0 || (newEndMonth && newEndYear && (newEndYear < new Date().getFullYear() || (newEndYear === new Date().getFullYear() && newEndMonth < new Date().getMonth() + 1))))) {
-          newStatus = 'completed';
-          newIsActive = 0;
+        if ((target.is_installment && newBalance === 0) || (!target.is_installment && !isPartial)) {
+          isFullySettled = true;
+          if (target.is_installment) {
+            newStatus = 'completed';
+            newIsActive = 0;
+          }
         }
 
         // Record payment
         await pool.query(
           `INSERT INTO obligation_payments (obligation_id, user_id, amount_paid, paid_date, months_covered, is_advance, balance_after, notes)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [target.id, userId, finalPaymentAmt, todayStr, monthsCovered, monthsCovered > 1 ? 1 : 0, newBalance, 'Paid via BudgetPH AI Co-Pilot']
+          [target.id, userId, finalPaymentAmt, todayStr, monthsCovered, monthsCovered > 1 ? 1 : 0, newBalance, isPartial ? 'Partial bill payment' : 'Paid via BudgetPH AI Co-Pilot']
         );
 
         if (target.is_installment) {
@@ -814,6 +950,11 @@ export async function executeAiTool(name, args, userId = 1) {
              SET remaining_balance = ?, end_month = ?, end_year = ?, status = ?, is_active = ?, paid_months_count = COALESCE(paid_months_count, 0) + ?
              WHERE id = ? AND user_id = ?`,
             [newBalance, newEndMonth, newEndYear, newStatus, newIsActive, monthsCovered, target.id, userId]
+          );
+        } else {
+          await pool.query(
+            `UPDATE obligations SET partial_paid_amount = ?, status = ? WHERE id = ? AND user_id = ?`,
+            [newPartialPaid, newStatus, target.id, userId]
           );
         }
 

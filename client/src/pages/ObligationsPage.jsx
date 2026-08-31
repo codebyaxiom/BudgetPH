@@ -167,9 +167,11 @@ export function ObligationsPage() {
 
   const overdueBills = obligations.filter(o => !o.is_paid && o.is_active && getBillDueStatus(o.due_day, o.is_paid, language, o).isOverdue);
   const dueTodayBills = obligations.filter(o => !o.is_paid && o.is_active && getBillDueStatus(o.due_day, o.is_paid, language, o).isDueToday);
-  const installmentDebts = obligations.filter(o => isInstOb(o));
+  const installmentDebts = obligations.filter(o => isInstOb(o) && o.debt_type !== 'receivable');
   const variableBills = obligations.filter(o => Boolean(o.is_variable) && o.is_active);
-  const completedDebts = obligations.filter(o => o.status === 'completed' || (!o.is_active && isInstOb(o)));
+  const receivables = obligations.filter(o => o.debt_type === 'receivable' && o.is_active);
+  const partialPaidBills = obligations.filter(o => o.status === 'partially_paid' && o.is_active);
+  const completedDebts = obligations.filter(o => o.status === 'completed' || o.status === 'forgiven' || (!o.is_active && isInstOb(o)));
   const totalOverdueAmount = overdueBills.reduce((sum, o) => sum + parseFloat(o.amount || 0), 0);
 
   const filtered = obligations.filter(o => {
@@ -177,10 +179,12 @@ export function ObligationsPage() {
     if (filter === 'overdue') return !o.is_paid && o.is_active && dueInfo.isOverdue;
     if (filter === 'due_soon') return !o.is_paid && o.is_active && dueInfo.isDueSoon;
     if (filter === 'paid') return o.is_paid;
-    if (filter === 'pending') return !o.is_paid && o.is_active;
-    if (filter === 'installments') return isInstOb(o) && o.is_active;
+    if (filter === 'pending') return !o.is_paid && o.is_active && o.status !== 'partially_paid';
+    if (filter === 'partial') return o.status === 'partially_paid' && o.is_active;
+    if (filter === 'installments') return isInstOb(o) && o.is_active && o.debt_type !== 'receivable';
+    if (filter === 'receivables') return o.debt_type === 'receivable' && o.is_active;
     if (filter === 'variable') return Boolean(o.is_variable) && o.is_active;
-    if (filter === 'completed') return o.status === 'completed' || (!o.is_active && isInstOb(o));
+    if (filter === 'completed') return o.status === 'completed' || o.status === 'forgiven' || (!o.is_active && isInstOb(o));
     return o.is_active || filter === 'all';
   });
 
@@ -189,6 +193,7 @@ export function ObligationsPage() {
     { id: 'overdue', labelEn: `🚨 Overdue (${overdueBills.length})`, labelTl: `🚨 Lipas na (${overdueBills.length})`, count: overdueBills.length, isUrgent: overdueBills.length > 0 },
     { id: 'due_soon', labelEn: '⏳ Due Soon / Today', labelTl: '⏳ Nearing Due', count: dueTodayBills.length },
     { id: 'installments', labelEn: `⏳ Installments & Utang (${installmentDebts.filter(d=>d.is_active).length})`, labelTl: `⏳ Hulugan at Utang (${installmentDebts.filter(d=>d.is_active).length})` },
+    { id: 'receivables', labelEn: `💰 Pautang / Collectible (${receivables.length})`, labelTl: `💰 Pautang / Sisingilin (${receivables.length})` },
     { id: 'variable', labelEn: `📊 Variable Utilities (${variableBills.length})`, labelTl: `📊 Pabago-bago (${variableBills.length})` },
     { id: 'pending', labelEn: 'Pending Bills', labelTl: 'Hindi Pa Bayad' },
     { id: 'paid', labelEn: 'Paid Bills', labelTl: 'Bayad Na' },
