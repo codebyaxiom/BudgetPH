@@ -278,7 +278,9 @@ Tool Guidelines:
 2. 'update_income_schedule': Call when user changes pay schedule (e.g. from 15/30 to monthly or weekly).
 3. 'log_expense': Call when user logs an actual spent expense (e.g. "Lunch ₱250", "Pamasahe ₱50").
 4. 'add_obligation_or_debt': Call when user mentions a new bill, debt, utang, or loan.
-5. 'mark_bill_paid': Call when user mentions they paid a bill (e.g. "Nabayaran ko na kuryente").
+   - If user mentions an end date or installment terms (e.g. "2000 per month until December", "hulugan for 6 months"), set 'is_installment: true', 'end_month', and 'end_year'.
+   - If user mentions a lump sum debt without a payment schedule (e.g. "May utang ako kay Tito Jun ₱10,000"), save it immediately as a debt and proactively ask if they want to split it into monthly installments (e.g. "Gusto mo ba itong i-set up bilang ₱2,000/buwan?").
+5. 'mark_bill_paid': Call when user mentions paying a bill or advancing debt payments (e.g. "Nabayaran ko na kuryente", "Nag-advance ako ng 2 months kay Aunt Maria ₱4,000").
 6. 'deposit_to_savings': Call when user puts money into emergency fund or savings.
 7. 'add_family_allowance': Call when adding a child or family dependent's regular allowance/baon to the budget (use real names or "Bunso"/"Panganay").
 8. 'update_family_member_name': Call when renaming or updating a family member's name (e.g. "Gawing Lucas si Grade 2 Kid").
