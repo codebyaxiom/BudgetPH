@@ -163,7 +163,7 @@ export function ObligationsPage() {
   const currentMonthNum = new Date().getMonth() + 1;
   const currentYearNum = new Date().getFullYear();
 
-  const isInstOb = (o) => Boolean(o.is_installment) || o.category === 'loan' || (o.name && o.name.toLowerCase().includes('utang'));
+  const isInstOb = (o) => Boolean(o.is_installment) && (o.end_month !== null && o.end_month !== undefined && o.end_month > 0);
 
   const overdueBills = obligations.filter(o => !o.is_paid && o.is_active && getBillDueStatus(o.due_day, o.is_paid, language).isOverdue);
   const dueTodayBills = obligations.filter(o => !o.is_paid && o.is_active && getBillDueStatus(o.due_day, o.is_paid, language).isDueToday);
