@@ -165,15 +165,15 @@ export function ObligationsPage() {
 
   const isInstOb = (o) => Boolean(o.is_installment) && (o.end_month !== null && o.end_month !== undefined && o.end_month > 0);
 
-  const overdueBills = obligations.filter(o => !o.is_paid && o.is_active && getBillDueStatus(o.due_day, o.is_paid, language).isOverdue);
-  const dueTodayBills = obligations.filter(o => !o.is_paid && o.is_active && getBillDueStatus(o.due_day, o.is_paid, language).isDueToday);
+  const overdueBills = obligations.filter(o => !o.is_paid && o.is_active && getBillDueStatus(o.due_day, o.is_paid, language, o).isOverdue);
+  const dueTodayBills = obligations.filter(o => !o.is_paid && o.is_active && getBillDueStatus(o.due_day, o.is_paid, language, o).isDueToday);
   const installmentDebts = obligations.filter(o => isInstOb(o));
   const variableBills = obligations.filter(o => Boolean(o.is_variable) && o.is_active);
   const completedDebts = obligations.filter(o => o.status === 'completed' || (!o.is_active && isInstOb(o)));
   const totalOverdueAmount = overdueBills.reduce((sum, o) => sum + parseFloat(o.amount || 0), 0);
 
   const filtered = obligations.filter(o => {
-    const dueInfo = getBillDueStatus(o.due_day, o.is_paid, language);
+    const dueInfo = getBillDueStatus(o.due_day, o.is_paid, language, o);
     if (filter === 'overdue') return !o.is_paid && o.is_active && dueInfo.isOverdue;
     if (filter === 'due_soon') return !o.is_paid && o.is_active && dueInfo.isDueSoon;
     if (filter === 'paid') return o.is_paid;
@@ -289,7 +289,7 @@ export function ObligationsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filtered.map(ob => {
             const catLabel = CATEGORY_NAMES[ob.category]?.[language] || ob.category;
-            const dueInfo = getBillDueStatus(ob.due_day, ob.is_paid, language);
+            const dueInfo = getBillDueStatus(ob.due_day, ob.is_paid, language, ob);
             const isInstallment = isInstOb(ob);
             const isCompleted = ob.status === 'completed' || (!ob.is_active && isInstallment);
             

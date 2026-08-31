@@ -80,6 +80,9 @@ async function syncSchema() {
     ALTER TABLE obligations ADD COLUMN IF NOT EXISTS monthly_amount DECIMAL(12,2);
     ALTER TABLE obligations ADD COLUMN IF NOT EXISTS end_month INT;
     ALTER TABLE obligations ADD COLUMN IF NOT EXISTS end_year INT;
+    ALTER TABLE obligations ADD COLUMN IF NOT EXISTS due_date DATE;
+    ALTER TABLE obligations ADD COLUMN IF NOT EXISTS due_month INT;
+    ALTER TABLE obligations ADD COLUMN IF NOT EXISTS due_year INT;
     ALTER TABLE obligations ADD COLUMN IF NOT EXISTS status VARCHAR(30) DEFAULT 'active';
     ALTER TABLE obligations ADD COLUMN IF NOT EXISTS creditor_name VARCHAR(150);
     ALTER TABLE obligations ADD COLUMN IF NOT EXISTS paid_months_count INT DEFAULT 0;

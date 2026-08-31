@@ -99,17 +99,29 @@ export async function saveObligation(req, res) {
       }
     }
 
+    let finalDueMonth = req.body.due_month ? parseInt(req.body.due_month, 10) : null;
+    let finalDueYear = req.body.due_year ? parseInt(req.body.due_year, 10) : (finalDueMonth ? currentYear : null);
+    if (!finalDueMonth && parseInt(due_day, 10) < new Date().getDate()) {
+      finalDueMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+      finalDueYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+    }
+    let finalDueDate = (finalDueMonth && finalDueYear) 
+      ? `${finalDueYear}-${String(finalDueMonth).padStart(2, '0')}-${String(due_day).padStart(2, '0')}` 
+      : null;
+
     if (id) {
       await pool.query(
         `UPDATE obligations
          SET name = ?, amount = ?, category = ?, due_day = ?, frequency = ?, is_variable = ?, is_active = ?, notes = ?,
              is_installment = ?, total_amount = ?, remaining_balance = ?, monthly_amount = ?,
-             end_month = ?, end_year = ?, creditor_name = ?
+             end_month = ?, end_year = ?, creditor_name = ?,
+             due_month = ?, due_year = ?, due_date = ?
          WHERE id = ? AND user_id = ?`,
         [
           name, amount, category, due_day, frequency, is_variable ? 1 : 0, is_active, notes,
           is_installment ? 1 : 0, finalTotal, finalRemaining, finalMonthly,
           finalEndMonth, finalEndYear, creditor_name || null,
+          finalDueMonth, finalDueYear, finalDueDate,
           id, userId
         ]
       );
@@ -119,13 +131,14 @@ export async function saveObligation(req, res) {
         `INSERT INTO obligations (
           user_id, name, amount, category, due_day, frequency, is_variable, is_active, notes,
           is_installment, total_amount, remaining_balance, monthly_amount,
-          end_month, end_year, creditor_name, status
+          end_month, end_year, creditor_name, due_month, due_year, due_date, status
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           userId, name, amount, category, due_day, frequency, is_variable ? 1 : 0, is_active, notes,
           is_installment ? 1 : 0, finalTotal, finalRemaining, finalMonthly,
-          finalEndMonth, finalEndYear, creditor_name || null, 'active'
+          finalEndMonth, finalEndYear, creditor_name || null,
+          finalDueMonth, finalDueYear, finalDueDate, 'active'
         ]
       );
       res.json({ success: true, id: result.insertId });

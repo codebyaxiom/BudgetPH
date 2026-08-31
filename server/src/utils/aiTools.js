@@ -125,6 +125,14 @@ export const aiToolDefinitions = [
             type: 'number',
             description: 'Target end year (e.g. 2026)'
           },
+          due_month: {
+            type: 'number',
+            description: 'Specific target due month (1 to 12). E.g. pass 9 for next month if current month is August.'
+          },
+          due_year: {
+            type: 'number',
+            description: 'Target due year (e.g. 2026)'
+          },
           is_variable: {
             type: 'boolean',
             description: 'True if amount changes every month (e.g. Electricity, Water)'
@@ -590,15 +598,30 @@ export async function executeAiTool(name, args, userId = 1) {
           endYear = targetY;
         }
 
+        let dueMonth = args.due_month ? parseInt(args.due_month, 10) : null;
+        let dueYear = args.due_year ? parseInt(args.due_year, 10) : (dueMonth ? currentYear : null);
+        
+        // If dueDay is less than today's day and dueMonth wasn't explicitly specified, target next month
+        if (!dueMonth && dueDay < new Date().getDate()) {
+          dueMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+          dueYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+        }
+
+        let dueDate = (dueMonth && dueYear) 
+          ? `${dueYear}-${String(dueMonth).padStart(2, '0')}-${String(dueDay).padStart(2, '0')}` 
+          : null;
+
         const [res] = await pool.query(
           `INSERT INTO obligations (
             user_id, name, amount, category, due_day, cutoff_assignment, is_variable, is_active, notes,
-            is_installment, total_amount, remaining_balance, monthly_amount, end_month, end_year, status
+            is_installment, total_amount, remaining_balance, monthly_amount, end_month, end_year,
+            due_month, due_year, due_date, status
           )
-          VALUES (?, ?, ?, ?, ?, 'auto', ?, 1, ?, ?, ?, ?, ?, ?, ?, 'active')`,
+          VALUES (?, ?, ?, ?, ?, 'auto', ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
           [
             userId, name, amount, category, dueDay, isVariable, notes,
-            isInstallment, totalAmount, remainingBalance, amount, endMonth, endYear
+            isInstallment, totalAmount, remainingBalance, amount, endMonth, endYear,
+            dueMonth, dueYear, dueDate
           ]
         );
 
