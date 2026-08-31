@@ -7,7 +7,7 @@ import { getBillDueStatus } from '../utils/billStatus';
 
 export function DashboardPage({ setActiveTab }) {
   const { dashboardData, proactiveAlerts, isLoadingDashboard, loadDashboard, openExpenseModal } = useBudgetStore();
-  const { t } = useLanguageStore();
+  const { language, t } = useLanguageStore();
 
   useEffect(() => {
     loadDashboard();

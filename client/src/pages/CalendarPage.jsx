@@ -156,6 +156,10 @@ export function CalendarPage({ setActiveTab }) {
   const obligations = calendarData?.obligations || [];
   const paydayCycles = calendarData?.paydayCycles || [];
 
+  const overdueBills = obligations.filter(o => !o.is_paid && getBillDueStatus(o.due_day, o.is_paid, language).isOverdue);
+  const overdueAmount = overdueBills.reduce((sum, o) => sum + parseFloat(o.amount || 0), 0);
+  const hasOverdue = overdueBills.length > 0;
+
   // Selected Day Details
   const selectedDayExpenses = selectedDay && dailyExpenses[selectedDay] ? dailyExpenses[selectedDay] : null;
   const selectedDayNumber = selectedDay ? parseInt(selectedDay.split('-')[2]) : null;
@@ -171,9 +175,8 @@ export function CalendarPage({ setActiveTab }) {
       {/* Header & Controls */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-50 font-['Plus_Jakarta_Sans'] flex items-center gap-2.5">
-            <span>{t('calendar_header')}</span>
-            <span>🗓️</span>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-50 font-['Plus_Jakarta_Sans']">
+            {t('calendar_header')}
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
             {t('calendar_subheader')}
@@ -214,6 +217,34 @@ export function CalendarPage({ setActiveTab }) {
         </div>
       </div>
 
+      {/* 🚨 Overdue Alert Banner if bills are past due */}
+      {hasOverdue && (
+        <div className="p-4 rounded-2xl bg-rose-500/10 dark:bg-rose-950/40 border-2 border-rose-500/40 text-rose-900 dark:text-rose-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-rose-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="font-extrabold text-xs sm:text-sm font-['Plus_Jakarta_Sans'] text-rose-700 dark:text-rose-300">
+                {isTL 
+                  ? `🚨 Paalala: May ${overdueBills.length} bayarin na lampas na sa due date (₱${overdueAmount.toLocaleString()})!`
+                  : `🚨 Attention: You have ${overdueBills.length} overdue bill(s) past due date totaling ₱${overdueAmount.toLocaleString()}!`}
+              </p>
+              <p className="text-[11px] text-rose-600 dark:text-rose-400">
+                {isTL ? 'I-click ang petsa o pumunta sa Obligations para magbayad.' : 'Click the dates on the calendar or navigate to Obligations to settle.'}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setActiveTab && setActiveTab('obligations')}
+            className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-xs transition whitespace-nowrap cursor-pointer self-start sm:self-center"
+          >
+            {isTL ? 'Bayaran sa Obligations' : 'Go to Obligations'}
+          </button>
+        </div>
+      )}
+
       {/* Monthly Metrics Ticker */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="p-3.5 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl shadow-xs">
@@ -243,14 +274,26 @@ export function CalendarPage({ setActiveTab }) {
           </p>
         </div>
 
-        <div className="p-3.5 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl shadow-xs">
-          <span className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">
-            {isTL ? 'Pending / Hindi Pa Bayad' : 'Pending Obligations'}
-          </span>
-          <p className="text-xl font-black text-amber-600 dark:text-amber-400 mt-0.5 font-['Plus_Jakarta_Sans']">
-            ₱{Number(summary.pendingBills || 0).toLocaleString()}
-          </p>
-        </div>
+        {hasOverdue ? (
+          <div className="p-3.5 bg-rose-50/60 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 rounded-2xl shadow-xs">
+            <span className="text-[10px] font-black uppercase tracking-wider text-rose-600 dark:text-rose-400 flex items-center gap-1">
+              <span>🚨</span>
+              <span>{isTL ? 'Lipas na sa Due (Overdue)' : 'Overdue Obligations'}</span>
+            </span>
+            <p className="text-xl font-black text-rose-600 dark:text-rose-400 mt-0.5 font-['Plus_Jakarta_Sans']">
+              ₱{Number(overdueAmount).toLocaleString()}
+            </p>
+          </div>
+        ) : (
+          <div className="p-3.5 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl shadow-xs">
+            <span className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">
+              {isTL ? 'Pending / Hindi Pa Bayad' : 'Pending Obligations'}
+            </span>
+            <p className="text-xl font-black text-amber-600 dark:text-amber-400 mt-0.5 font-['Plus_Jakarta_Sans']">
+              ₱{Number(summary.pendingBills || 0).toLocaleString()}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Main Calendar Grid */}
