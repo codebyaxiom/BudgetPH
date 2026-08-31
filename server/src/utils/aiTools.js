@@ -92,33 +92,45 @@ export const aiToolDefinitions = [
     type: 'function',
     function: {
       name: 'add_obligation_or_debt',
-      description: 'Adds a recurring monthly bill, loan, debt/utang owed to someone, or pautang lent to others.',
+      description: 'Adds a recurring monthly bill, loan, installment debt/utang owed to someone, or pautang lent to others. If due_day is not specified by the user, immediately call this function with due_day=15.',
       parameters: {
         type: 'object',
         properties: {
           name: {
             type: 'string',
-            description: 'Name of the bill or person (e.g. "Meralco Electric Bill", "Utang kay Tito Jun", "Wifi")'
+            description: 'Name of the bill, person, or creditor (e.g. "Meralco Electric Bill", "Utang kay Aunt Maria", "SSS Loan", "Wifi")'
           },
           amount: {
             type: 'number',
-            description: 'Amount of the obligation or bill in PHP'
+            description: 'Monthly amount of the obligation or installment payment in PHP'
           },
           due_day: {
             type: 'number',
-            description: 'Day of the month it is due (1 to 31)'
+            description: 'Day of the month it is due (1 to 31). If omitted, default to 15.'
           },
           category: {
             type: 'string',
             enum: ['electricity', 'water', 'rent', 'internet', 'loan', 'credit_card', 'insurance', 'subscription', 'other'],
             description: 'Category of the bill or debt'
           },
+          is_installment: {
+            type: 'boolean',
+            description: 'True if this is a fixed-term debt or installment with a target completion date'
+          },
+          end_month: {
+            type: 'number',
+            description: 'Target end month number (1 to 12, e.g. 12 for December) when the debt/bill will be completely paid off'
+          },
+          end_year: {
+            type: 'number',
+            description: 'Target end year (e.g. 2026)'
+          },
           notes: {
             type: 'string',
             description: 'Optional additional details or context'
           }
         },
-        required: ['name', 'amount', 'due_day']
+        required: ['name', 'amount']
       }
     }
   },
@@ -463,22 +475,68 @@ export async function executeAiTool(name, args, userId = 1) {
         const category = validCategories.includes(args.category) ? args.category : 'loan';
         const notes = args.notes || '';
 
+        const currentMonth = new Date().getMonth() + 1;
+        const currentYear = new Date().getFullYear();
+
+        let isInstallment = args.is_installment ? 1 : 0;
+        let endMonth = args.end_month ? parseInt(args.end_month, 10) : null;
+        let endYear = args.end_year ? parseInt(args.end_year, 10) : currentYear;
+        let totalAmount = args.total_amount ? parseFloat(args.total_amount) : null;
+        let remainingBalance = null;
+
+        if (endMonth) {
+          isInstallment = 1;
+          if (endMonth < currentMonth && !args.end_year) {
+            endYear = currentYear + 1;
+          }
+          const totalMonths = Math.max(1, (endYear - currentYear) * 12 + (endMonth - currentMonth) + 1);
+          if (!totalAmount) {
+            totalAmount = totalMonths * amount;
+          }
+          remainingBalance = totalAmount;
+        } else if (totalAmount) {
+          isInstallment = 1;
+          remainingBalance = totalAmount;
+          const months = Math.ceil(totalAmount / amount);
+          let targetM = currentMonth + months - 1;
+          let targetY = currentYear;
+          while (targetM > 12) {
+            targetM -= 12;
+            targetY += 1;
+          }
+          endMonth = targetM;
+          endYear = targetY;
+        }
+
         const [res] = await pool.query(
-          `INSERT INTO obligations (user_id, name, amount, category, due_day, cutoff_assignment, is_variable, is_active, notes)
-           VALUES (?, ?, ?, ?, ?, 'auto', 0, 1, ?)`,
-          [userId, name, amount, category, dueDay, notes]
+          `INSERT INTO obligations (
+            user_id, name, amount, category, due_day, cutoff_assignment, is_variable, is_active, notes,
+            is_installment, total_amount, remaining_balance, monthly_amount, end_month, end_year, status
+          )
+          VALUES (?, ?, ?, ?, ?, 'auto', 0, 1, ?, ?, ?, ?, ?, ?, ?, 'active')`,
+          [
+            userId, name, amount, category, dueDay, notes,
+            isInstallment, totalAmount, remainingBalance, amount, endMonth, endYear
+          ]
         );
 
         return {
           success: true,
           action_type: 'add_obligation_or_debt',
-          summary: `Added obligation: ${name} (₱${amount.toLocaleString()}) due every ${dueDay}th.`,
+          summary: isInstallment
+            ? `Added installment debt: ${name} (₱${amount.toLocaleString()}/mo until ${endMonth}/${endYear}).`
+            : `Added obligation: ${name} (₱${amount.toLocaleString()}) due every ${dueDay}th.`,
           data: {
             obligation_id: res.insertId,
             name,
             amount,
             due_day: dueDay,
-            category
+            category,
+            is_installment: Boolean(isInstallment),
+            end_month: endMonth,
+            end_year: endYear,
+            total_amount: totalAmount,
+            remaining_balance: remainingBalance
           }
         };
       }
@@ -522,7 +580,7 @@ export async function executeAiTool(name, args, userId = 1) {
 
         // If no bill exists yet with this name, auto-create it seamlessly
         if (!target) {
-          const finalName = args.bill_name.charAt(0).toUpperCase() + args.bill_name.slice(1);
+          const finalName = args.bill_name ? (args.bill_name.charAt(0).toUpperCase() + args.bill_name.slice(1)) : 'Obligation';
           const finalAmt = amountPaid > 0 ? amountPaid : 1500;
           const [createRes] = await pool.query(
             `INSERT INTO obligations (user_id, name, amount, category, due_day, cutoff_assignment, is_variable, is_active, notes)
@@ -532,28 +590,71 @@ export async function executeAiTool(name, args, userId = 1) {
           target = {
             id: createRes.insertId,
             name: finalName,
-            amount: finalAmt
+            amount: finalAmt,
+            is_installment: 0
           };
         }
 
-        const finalPaymentAmt = amountPaid > 0 ? amountPaid : target.amount;
+        const monthlyAmt = parseFloat(target.monthly_amount || target.amount);
+        const finalPaymentAmt = amountPaid > 0 ? amountPaid : monthlyAmt;
+        const monthsCovered = monthlyAmt > 0 ? Math.max(1, Math.round(finalPaymentAmt / monthlyAmt)) : 1;
+
+        let newBalance = target.remaining_balance !== null ? Math.max(0, parseFloat(target.remaining_balance) - finalPaymentAmt) : null;
+        let newEndMonth = target.end_month;
+        let newEndYear = target.end_year;
+        let newStatus = target.status || 'active';
+        let newIsActive = target.is_active;
+
+        // Advance payment shifting logic:
+        if (target.is_installment && target.end_month && target.end_year && monthsCovered > 1) {
+          const extraMonths = monthsCovered - 1;
+          newEndMonth -= extraMonths;
+          while (newEndMonth < 1) {
+            newEndMonth += 12;
+            newEndYear -= 1;
+          }
+        }
+
+        // Auto-complete if balance is 0 or end date reached
+        if (target.is_installment && (newBalance === 0 || (newEndMonth && newEndYear && (newEndYear < new Date().getFullYear() || (newEndYear === new Date().getFullYear() && newEndMonth < new Date().getMonth() + 1))))) {
+          newStatus = 'completed';
+          newIsActive = 0;
+        }
 
         // Record payment
         await pool.query(
-          `INSERT INTO obligation_payments (obligation_id, user_id, amount_paid, paid_date, notes)
-           VALUES (?, ?, ?, ?, ?)`,
-          [target.id, userId, finalPaymentAmt, todayStr, 'Marked paid via BudgetPH AI Co-Pilot']
+          `INSERT INTO obligation_payments (obligation_id, user_id, amount_paid, paid_date, months_covered, is_advance, balance_after, notes)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [target.id, userId, finalPaymentAmt, todayStr, monthsCovered, monthsCovered > 1 ? 1 : 0, newBalance, 'Paid via BudgetPH AI Co-Pilot']
         );
+
+        if (target.is_installment) {
+          await pool.query(
+            `UPDATE obligations
+             SET remaining_balance = ?, end_month = ?, end_year = ?, status = ?, is_active = ?, paid_months_count = COALESCE(paid_months_count, 0) + ?
+             WHERE id = ? AND user_id = ?`,
+            [newBalance, newEndMonth, newEndYear, newStatus, newIsActive, monthsCovered, target.id, userId]
+          );
+        }
 
         return {
           success: true,
           action_type: 'mark_bill_paid',
-          summary: `Marked "${target.name}" (₱${finalPaymentAmt.toLocaleString()}) as paid!`,
+          summary: newStatus === 'completed'
+            ? `🎉 Fully Paid! "${target.name}" is now completely settled!`
+            : monthsCovered > 1
+              ? `Paid ₱${finalPaymentAmt.toLocaleString()} (${monthsCovered} months advance) for "${target.name}". End date moved to ${newEndMonth}/${newEndYear}!`
+              : `Marked "${target.name}" (₱${finalPaymentAmt.toLocaleString()}) as paid!`,
           data: {
             obligation_id: target.id,
             name: target.name,
             amount_paid: finalPaymentAmt,
-            paid_date: todayStr
+            paid_date: todayStr,
+            months_covered: monthsCovered,
+            remaining_balance: newBalance,
+            new_end_month: newEndMonth,
+            new_end_year: newEndYear,
+            is_completed: newStatus === 'completed'
           }
         };
       }

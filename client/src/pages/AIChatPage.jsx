@@ -634,15 +634,18 @@ export function AIChatPage({ setActiveTab }) {
                         </div>
                       )}
 
-                      {/* Add Obligation / Bill Action Card */}
+                      {/* Add Obligation / Bill / Installment Debt Action Card */}
                       {receipt.action_type === 'add_obligation_or_debt' && (
                         <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs flex items-center justify-between shadow-sm">
                           <div>
-                            <p className="font-bold text-amber-900 dark:text-amber-300">
-                              📋 {receipt.data.name} (₱{Number(receipt.data.amount).toLocaleString()})
+                            <p className="font-bold text-amber-900 dark:text-amber-300 flex items-center gap-1.5">
+                              <span>📋</span>
+                              <span>{receipt.data.name} (₱{Number(receipt.data.amount).toLocaleString()}{receipt.data.is_installment ? (isTL ? '/buwan' : '/mo') : ''})</span>
                             </p>
                             <p className="text-[10px] text-amber-700/80 dark:text-amber-400/80 mt-0.5">
-                              {receipt.data.is_debt ? (isTL ? 'Naitalang Utang / Loan' : 'Recorded Loan / Debt') : `${isTL ? 'Due tuwing ika-' : 'Due every '}${receipt.data.due_day}th`}
+                              {receipt.data.is_installment 
+                                ? (isTL ? `Hulugan hanggang Buwan ${receipt.data.end_month}/${receipt.data.end_year || 2026} · Due tuwing ika-${receipt.data.due_day}` : `Installment until Month ${receipt.data.end_month}/${receipt.data.end_year || 2026} · Due every ${receipt.data.due_day}th`)
+                                : `${isTL ? 'Due tuwing ika-' : 'Due every '}${receipt.data.due_day}th`}
                             </p>
                           </div>
                           <button
@@ -655,18 +658,30 @@ export function AIChatPage({ setActiveTab }) {
                         </div>
                       )}
 
-                      {/* Mark Bill Paid Action Card */}
+                      {/* Mark Bill Paid / Advance Payment Action Card */}
                       {receipt.action_type === 'mark_bill_paid' && (
                         <div className="p-3.5 rounded-2xl bg-green-500/10 border border-green-500/30 text-xs flex items-center justify-between shadow-sm">
-                          <p className="font-bold text-green-900 dark:text-green-300 flex items-center gap-1.5">
-                            <CheckCircle2 className="w-4 h-4 text-green-600" />
-                            <span>{receipt.data.name} {isTL ? 'na-markahan na bayad!' : 'marked as paid!'} (₱{Number(receipt.data.amount_paid).toLocaleString()})</span>
-                          </p>
+                          <div>
+                            <p className="font-bold text-green-900 dark:text-green-300 flex items-center gap-1.5">
+                              <CheckCircle2 className="w-4 h-4 text-green-600" />
+                              <span>
+                                {receipt.data.is_completed 
+                                  ? (isTL ? `🎉 ${receipt.data.name} Fully Settled!` : `🎉 ${receipt.data.name} Fully Paid!`)
+                                  : `${receipt.data.name} (₱${Number(receipt.data.amount_paid).toLocaleString()})`}
+                              </span>
+                            </p>
+                            <p className="text-[10px] text-green-700/80 dark:text-green-400/80 mt-0.5">
+                              {receipt.data.months_covered > 1 
+                                ? (isTL ? `Advance payment (${receipt.data.months_covered} buwan)! Bagong target end: Buwan ${receipt.data.new_end_month}/${receipt.data.new_end_year}` : `Advance payment (${receipt.data.months_covered} months)! New target end: Month ${receipt.data.new_end_month}/${receipt.data.new_end_year}`)
+                                : (isTL ? 'Na-markahan na bayad para sa kasalukuyang cut-off!' : 'Marked as paid for the current cycle!')}
+                            </p>
+                          </div>
                           <button
                             onClick={() => setActiveTab && setActiveTab('obligations')}
-                            className="text-green-700 dark:text-green-300 hover:underline font-bold text-[11px]"
+                            className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold text-[11px] transition flex items-center gap-1 cursor-pointer"
                           >
-                            {t('obligations')} ➔
+                            <span>{t('obligations')}</span>
+                            <ArrowRight className="w-3 h-3" />
                           </button>
                         </div>
                       )}

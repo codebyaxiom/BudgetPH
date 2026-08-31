@@ -60,9 +60,29 @@ async function syncSchema() {
       cutoff_assignment VARCHAR(30) DEFAULT 'auto',
       is_active SMALLINT DEFAULT 1,
       is_variable SMALLINT DEFAULT 0,
+      is_installment SMALLINT DEFAULT 0,
+      total_amount DECIMAL(12,2),
+      remaining_balance DECIMAL(12,2),
+      monthly_amount DECIMAL(12,2),
+      end_month INT,
+      end_year INT,
+      status VARCHAR(30) DEFAULT 'active',
+      creditor_name VARCHAR(150),
+      paid_months_count INT DEFAULT 0,
       notes TEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+
+    ALTER TABLE obligations ADD COLUMN IF NOT EXISTS frequency VARCHAR(30) DEFAULT 'monthly';
+    ALTER TABLE obligations ADD COLUMN IF NOT EXISTS is_installment SMALLINT DEFAULT 0;
+    ALTER TABLE obligations ADD COLUMN IF NOT EXISTS total_amount DECIMAL(12,2);
+    ALTER TABLE obligations ADD COLUMN IF NOT EXISTS remaining_balance DECIMAL(12,2);
+    ALTER TABLE obligations ADD COLUMN IF NOT EXISTS monthly_amount DECIMAL(12,2);
+    ALTER TABLE obligations ADD COLUMN IF NOT EXISTS end_month INT;
+    ALTER TABLE obligations ADD COLUMN IF NOT EXISTS end_year INT;
+    ALTER TABLE obligations ADD COLUMN IF NOT EXISTS status VARCHAR(30) DEFAULT 'active';
+    ALTER TABLE obligations ADD COLUMN IF NOT EXISTS creditor_name VARCHAR(150);
+    ALTER TABLE obligations ADD COLUMN IF NOT EXISTS paid_months_count INT DEFAULT 0;
 
     CREATE TABLE IF NOT EXISTS obligation_payments (
       id SERIAL PRIMARY KEY,
@@ -71,9 +91,16 @@ async function syncSchema() {
       amount_paid DECIMAL(12,2) NOT NULL,
       paid_date DATE NOT NULL,
       payday_cycle_id INT,
+      months_covered INT DEFAULT 1,
+      is_advance SMALLINT DEFAULT 0,
+      balance_after DECIMAL(12,2),
       notes TEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+
+    ALTER TABLE obligation_payments ADD COLUMN IF NOT EXISTS months_covered INT DEFAULT 1;
+    ALTER TABLE obligation_payments ADD COLUMN IF NOT EXISTS is_advance SMALLINT DEFAULT 0;
+    ALTER TABLE obligation_payments ADD COLUMN IF NOT EXISTS balance_after DECIMAL(12,2);
 
     CREATE TABLE IF NOT EXISTS family_members (
       id SERIAL PRIMARY KEY,

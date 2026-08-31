@@ -417,10 +417,73 @@ When you execute a tool, warmly confirm the exact details in your response.`;
       usedEngine = 'local';
       usedModel = 'BudgetPH Math Engine (Local)';
       const msg = message.toLowerCase();
-      const isTL = msg.includes('pwede') || msg.includes('bilhin') || msg.includes('bumili') || msg.includes('gastos') || msg.includes('magkano') || msg.includes('sahod') || lang === 'tl';
+      const isTL = msg.includes('pwede') || msg.includes('bilhin') || msg.includes('bumili') || msg.includes('gastos') || msg.includes('magkano') || msg.includes('sahod') || msg.includes('utang') || msg.includes('bayad') || lang === 'tl';
 
-      // Check for local payday command
-      if (msg.includes('sahod') || msg.includes('salary') || msg.includes('payday')) {
+      // Month name mapper for installment debt recognition
+      const monthNames = {
+        'january': 1, 'enero': 1, 'jan': 1,
+        'february': 2, 'pebrero': 2, 'feb': 2,
+        'march': 3, 'marso': 3, 'mar': 3,
+        'april': 4, 'abril': 4, 'apr': 4,
+        'may': 5, 'mayo': 5,
+        'june': 6, 'hunyo': 6, 'jun': 6,
+        'july': 7, 'hulyo': 7, 'jul': 7,
+        'august': 8, 'agosto': 8, 'aug': 8,
+        'september': 9, 'setyembre': 9, 'sept': 9, 'sep': 9,
+        'october': 10, 'oktubre': 10, 'oct': 10,
+        'november': 11, 'nobyembre': 11, 'nov': 11,
+        'december': 12, 'disyembre': 12, 'dec': 12
+      };
+
+      // 1. Check for Advance Payment / Debt Settlement
+      if ((msg.includes('advance') || msg.includes('bayad') || msg.includes('paid')) && (msg.includes('utang') || msg.includes('bill') || msg.includes('month') || msg.includes('buwan'))) {
+        const amtMatch = msg.match(/\d+[\d,]*/);
+        const amt = amtMatch ? parseFloat(amtMatch[0].replace(/,/g, '')) : 0;
+        
+        let targetName = 'utang';
+        if (msg.includes('aunt maria') || msg.includes('maria') || msg.includes('tita maria')) targetName = 'Aunt Maria';
+        else if (msg.includes('kuryente') || msg.includes('meralco')) targetName = 'Kuryente';
+        else if (msg.includes('tubig')) targetName = 'Tubig';
+        else if (msg.includes('internet') || msg.includes('wifi')) targetName = 'Internet';
+
+        actionReceipt = await executeAiTool('mark_bill_paid', { bill_name: targetName, amount_paid: amt }, userId);
+        aiResponse = actionReceipt.summary;
+      }
+      // 2. Check for Adding Utang / Installment Bill / Regular Obligation
+      else if (msg.includes('utang') || msg.includes('loan') || msg.includes('bill') || msg.includes('bayarin')) {
+        const amtMatch = msg.match(/\d+[\d,]*/);
+        const amt = amtMatch ? parseFloat(amtMatch[0].replace(/,/g, '')) : 1000;
+        
+        let billName = 'Utang / Loan';
+        if (msg.includes('aunt maria') || msg.includes('maria') || msg.includes('tita maria')) billName = 'Utang - Aunt Maria';
+        else if (msg.includes('kuryente') || msg.includes('meralco')) billName = 'Electricity Bill';
+        else if (msg.includes('tubig') || msg.includes('maynilad') || msg.includes('manila water')) billName = 'Water Bill';
+        else if (msg.includes('internet') || msg.includes('wifi')) billName = 'Internet Bill';
+        else if (msg.includes('rent') || msg.includes('upa')) billName = 'House Rent';
+
+        let detectedEndMonth = null;
+        for (const [mKey, mVal] of Object.entries(monthNames)) {
+          if (msg.includes(mKey)) {
+            detectedEndMonth = mVal;
+            break;
+          }
+        }
+
+        actionReceipt = await executeAiTool('add_obligation_or_debt', {
+          name: billName,
+          amount: amt,
+          due_day: 15,
+          category: msg.includes('utang') || msg.includes('loan') ? 'loan' : 'other',
+          is_installment: Boolean(detectedEndMonth),
+          end_month: detectedEndMonth
+        }, userId);
+
+        aiResponse = isTL
+          ? `✅ **Naitala na ang iyong bayarin!**\n- **Pangalan:** ${billName}\n- **Halaga:** ₱${amt.toLocaleString()} / buwan${detectedEndMonth ? ` (Hanggang Buwan ${detectedEndMonth})` : ''}\n- **Due Date:** Tuwing ika-15 ng buwan (pwede mong i-edit anytime sa Bills tab).`
+          : `✅ **Recorded your obligation!**\n- **Name:** ${billName}\n- **Amount:** ₱${amt.toLocaleString()} / month${detectedEndMonth ? ` (Until Month ${detectedEndMonth})` : ''}\n- **Due Date:** Every 15th of the month (editable anytime in the Bills tab).`;
+      }
+      // 3. Check for local payday command
+      else if (msg.includes('sahod') || msg.includes('salary') || msg.includes('payday')) {
         const match = msg.match(/\d+[\d,]*/);
         if (match) {
           const amt = parseFloat(match[0].replace(/,/g, ''));
