@@ -158,18 +158,21 @@ async function syncSchema() {
     CREATE TABLE IF NOT EXISTS wishlist_items (
       id SERIAL PRIMARY KEY,
       user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      item_name VARCHAR(255) NOT NULL,
-      estimated_price DECIMAL(12,2) NOT NULL,
-      category VARCHAR(50) DEFAULT 'gadget',
+      name VARCHAR(255) NOT NULL DEFAULT 'Wishlist Item',
+      estimated_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
       priority VARCHAR(20) DEFAULT 'medium',
-      cooldown_days INT DEFAULT 30,
-      added_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      unlock_date TIMESTAMP NOT NULL,
-      reason TEXT,
-      status VARCHAR(20) DEFAULT 'waiting',
-      purchased_date TIMESTAMP,
+      status VARCHAR(20) DEFAULT 'pending',
+      category VARCHAR(50) DEFAULT 'general',
+      notes TEXT,
+      purchased_at TIMESTAMP,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+
+    ALTER TABLE wishlist_items ADD COLUMN IF NOT EXISTS name VARCHAR(255) DEFAULT 'Wishlist Item';
+    ALTER TABLE wishlist_items ADD COLUMN IF NOT EXISTS estimated_amount DECIMAL(12,2) DEFAULT 0;
+    ALTER TABLE wishlist_items ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending';
+    ALTER TABLE wishlist_items ADD COLUMN IF NOT EXISTS notes TEXT;
+    ALTER TABLE wishlist_items ADD COLUMN IF NOT EXISTS purchased_at TIMESTAMP;
 
     CREATE TABLE IF NOT EXISTS utang (
       id SERIAL PRIMARY KEY,

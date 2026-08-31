@@ -19,6 +19,22 @@ if (isPostgres) {
     let paramIndex = 1;
     let pgSql = sql.replace(/\?/g, () => `$${paramIndex++}`);
     
+    // Auto-replace MySQL date functions with Postgres standard
+    pgSql = pgSql.replace(/CURRENT_DATE\(\)/gi, 'CURRENT_DATE');
+    pgSql = pgSql.replace(/CURDATE\(\)/gi, 'CURRENT_DATE');
+    pgSql = pgSql.replace(/MONTH\(([^)]+)\)/gi, 'EXTRACT(MONTH FROM $1)');
+    pgSql = pgSql.replace(/YEAR\(([^)]+)\)/gi, 'EXTRACT(YEAR FROM $1)');
+    
+    // Auto-replace MySQL ORDER BY FIELD
+    pgSql = pgSql.replace(
+      /ORDER\s+BY\s+FIELD\s*\(\s*(\w+)\s*,\s*([^)]+)\s*\)/gi,
+      (match, column, valuesStr) => {
+        const values = valuesStr.split(',').map(v => v.trim());
+        const caseParts = values.map((val, idx) => `WHEN ${val} THEN ${idx + 1}`).join(' ');
+        return `ORDER BY CASE ${column} ${caseParts} ELSE 99 END`;
+      }
+    );
+
     // Auto-append RETURNING id for INSERT statements if not present
     const trimmed = pgSql.trim();
     if (/^INSERT\s+INTO/i.test(trimmed) && !/RETURNING/i.test(trimmed)) {
