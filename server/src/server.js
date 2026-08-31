@@ -26,6 +26,12 @@ app.get('/health', (req, res) => {
 // Routes
 app.use('/api', apiRoutes);
 
-app.listen(PORT, () => {
-  console.log(`🚀 BudgetPH Server listening on http://localhost:${PORT}`);
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error('Unhandled Server Error:', err);
+  res.status(500).json({ success: false, error: err.message || 'Internal Server Error' });
+});
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 BudgetPH Server listening on port ${PORT}`);
 });
