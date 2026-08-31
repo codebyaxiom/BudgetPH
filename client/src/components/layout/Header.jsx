@@ -13,6 +13,7 @@ export function Header({ activeTab, onOpenMobileMenu, setActiveTab }) {
   const pageTitles = {
     dashboard: t('dashboard'),
     daily: t('daily'),
+    calendar: t('calendar'),
     reports: t('reports'),
     payday: t('payday'),
     obligations: t('obligations'),

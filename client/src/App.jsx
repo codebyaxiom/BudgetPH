@@ -5,6 +5,7 @@ import { LogExpenseModal } from './components/common/LogExpenseModal';
 import { FastTrackOnboardingModal } from './components/common/FastTrackOnboardingModal';
 import { DashboardPage } from './pages/DashboardPage';
 import { DailyPage } from './pages/DailyPage';
+import { CalendarPage } from './pages/CalendarPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { PaydayPage } from './pages/PaydayPage';
 import { ObligationsPage } from './pages/ObligationsPage';
@@ -57,6 +58,7 @@ export default function App() {
           {activeTab === 'ai' && <AIChatPage setActiveTab={setActiveTab} />}
           {activeTab === 'dashboard' && <DashboardPage setActiveTab={setActiveTab} />}
           {activeTab === 'daily' && <DailyPage />}
+          {activeTab === 'calendar' && <CalendarPage setActiveTab={setActiveTab} />}
           {activeTab === 'reports' && <ReportsPage />}
           {activeTab === 'payday' && <PaydayPage setActiveTab={setActiveTab} />}
           {activeTab === 'obligations' && <ObligationsPage />}

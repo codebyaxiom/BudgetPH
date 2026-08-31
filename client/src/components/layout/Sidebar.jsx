@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, CalendarDays, Receipt, Wallet, Users, Bot, TrendingUp, ShieldCheck, ShoppingBag, Settings, PanelLeftClose, Sparkles } from 'lucide-react';
+import { LayoutDashboard, CalendarDays, Calendar, Receipt, Wallet, Users, Bot, TrendingUp, ShieldCheck, ShoppingBag, Settings, PanelLeftClose, Sparkles } from 'lucide-react';
 import { useBudgetStore } from '../../stores/useBudgetStore';
 import { useLanguageStore } from '../../stores/useLanguageStore';
 
@@ -20,6 +20,7 @@ export function Sidebar({ activeTab, setActiveTab, isCollapsed, setIsCollapsed, 
       items: [
         { id: 'dashboard', label: t('dashboard'), icon: LayoutDashboard },
         { id: 'daily', label: t('daily'), icon: Wallet },
+        { id: 'calendar', label: t('calendar'), icon: Calendar },
         { id: 'reports', label: t('reports'), icon: TrendingUp },
       ]
     },

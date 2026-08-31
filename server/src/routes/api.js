@@ -7,11 +7,15 @@ import * as allowances from '../controllers/allowancesController.js';
 import * as savings from '../controllers/savingsController.js';
 import * as reports from '../controllers/reportsController.js';
 import * as settings from '../controllers/settingsController.js';
-import * as ai from '../controllers/aiController.js';
-import * as onboarding from '../controllers/onboardingController.js';
 import * as wishlist from '../controllers/wishlistController.js';
+import * as calendar from '../controllers/calendarController.js';
+import * as onboarding from '../controllers/onboardingController.js';
+import * as ai from '../controllers/aiController.js';
 
 const router = express.Router();
+
+// Calendar
+router.get('/calendar', calendar.getMonthCalendarData);
 
 // Onboarding
 router.get('/onboarding/status', onboarding.getOnboardingStatus);

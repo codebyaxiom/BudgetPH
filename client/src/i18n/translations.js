@@ -5,6 +5,7 @@ export const translations = {
     tagline: 'AI-Powered Budget Assistant for Filipino Families',
     dashboard: 'Dashboard',
     daily: 'Daily Budget',
+    calendar: 'Payday & Expense Calendar',
     reports: 'Reports & Health',
     payday: 'Payday Simulator',
     obligations: 'Bills & Obligations',
@@ -124,8 +125,21 @@ export const translations = {
     needs_desc: 'Food, transportation, utilities, and basic bills',
     wants_title: '🛍️ Wants (Discretionary)',
     wants_desc: 'Coffee, dining out, shopping, and recreation',
-    regrets_title: '🤦 Regrets (Impulsive)',
     regrets_desc: 'Target: Keep below 5% of spending',
+
+    // Calendar
+    calendar_header: 'Payday & Expense Calendar 🗓️',
+    calendar_subheader: 'Track payday cycles, upcoming bill due dates, and daily spending intensity.',
+    today_btn: 'Today',
+    payday_badge: 'Payday',
+    bills_due_badge: '{count} Bill(s) Due',
+    spent_badge: '₱{amount} spent',
+    day_inspector_title: 'Day Overview',
+    no_events_day: 'No scheduled bills, paydays, or expenses recorded on this day.',
+    total_month_spent: 'Total Month Expenses',
+    total_month_bills: 'Total Month Obligations',
+    paid_status: 'Paid',
+    pending_status: 'Pending',
 
     // Savings & Emergency Fund
     savings_header: 'Savings & Emergency Fund Tracker 🏦',
@@ -176,6 +190,7 @@ export const translations = {
     tagline: 'AI Budget Assistant para sa Pamilyang Pilipino',
     dashboard: 'Dashboard',
     daily: 'Pang-Araw-Araw',
+    calendar: 'Kalendaryo ng Gastos',
     reports: 'Ulat at Kalusugan',
     payday: 'Payday Simulator',
     obligations: 'Mga Bayarin at Bills',
@@ -297,6 +312,20 @@ export const translations = {
     wants_desc: 'Kape, shopping, dining out, recreation',
     regrets_title: '🤦 Regrets (Sayang na Gastos)',
     regrets_desc: 'Target: Panatilihing mas mababa sa 5%',
+
+    // Calendar
+    calendar_header: 'Kalendaryo ng Sahod at Gastusin 🗓️',
+    calendar_subheader: 'Subaybayan ang cut-off ng sahod, takdang araw ng bayarin, at pang-araw-araw na gastos.',
+    today_btn: 'Ngayong Araw',
+    payday_badge: 'Sahod',
+    bills_due_badge: '{count} Bayarin Due',
+    spent_badge: '₱{amount} nagastos',
+    day_inspector_title: 'Detalye ng Araw',
+    no_events_day: 'Walang nakatakdang bills, sahod, o nagastos sa araw na ito.',
+    total_month_spent: 'Kabuuang Gastos sa Buwan',
+    total_month_bills: 'Kabuuang Bayarin sa Buwan',
+    paid_status: 'Bayad Na',
+    pending_status: 'Hindi Pa Bayad',
 
     // Savings & Emergency Fund
     savings_header: 'Ipon at Emergency Fund Tracker 🏦',

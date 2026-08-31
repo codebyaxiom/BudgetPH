@@ -74,6 +74,9 @@ export const deleteSavingsGoal = (id) => request(`/savings/${id}`, { method: 'DE
 // Reports & Analytics
 export const fetchAnalytics = () => request('/reports/analytics');
 
+// Calendar
+export const fetchCalendarData = (month) => request(`/calendar${month ? `?month=${month}` : ''}`);
+
 // Settings & Profile
 export const fetchSettings = () => request('/settings');
 export const updateProfile = (payload) => request('/settings/profile', { method: 'POST', body: payload });
