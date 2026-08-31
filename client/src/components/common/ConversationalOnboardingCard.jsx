@@ -38,7 +38,7 @@ export function ConversationalOnboardingCard({ onComplete, setActiveTab }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const activeSalary = customSalary ? parseFloat(customSalary) || 0 : salaryAmount;
-  const selectedBills = bills.filter(b => b.selected);
+  const selectedBills = bills.filter(b => b.selected || (parseFloat(b.amount) > 0));
   const totalBills = selectedBills.reduce((sum, b) => sum + (parseFloat(b.amount) || 0), 0);
 
   // Compute Next Payday Date
@@ -72,7 +72,16 @@ export function ConversationalOnboardingCard({ onComplete, setActiveTab }) {
   };
 
   const updateBillAmount = (id, val) => {
-    setBills(prev => prev.map(b => b.id === id ? { ...b, amount: parseFloat(val) || 0 } : b));
+    setBills(prev => prev.map(b => {
+      if (b.id === id) {
+        return {
+          ...b,
+          amount: val,
+          selected: val !== '' && (parseFloat(val) > 0 || String(val).trim().length > 0)
+        };
+      }
+      return b;
+    }));
   };
 
   const handleAddCustomBill = (e) => {
@@ -105,21 +114,27 @@ export function ConversationalOnboardingCard({ onComplete, setActiveTab }) {
 
     setIsSubmitting(true);
     try {
-      const nextPayday = getComputedNextPayday();
+      const computedNextPayday = getComputedNextPayday() || new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0];
+      const finalSalary = Number(activeSalary) || 20000;
 
       const payload = {
-        name: name.trim(),
-        incomeAmount: activeSalary,
+        name: name.trim() || 'Ka-Budget',
+        income_amount: finalSalary,
+        incomeAmount: finalSalary,
         frequency: frequency === 'custom' ? 'semi-monthly' : frequency,
-        nextPaydayDate: nextPayday,
-        bills: selectedBills.map(b => ({
-          name: isTL ? b.labelTl : b.labelEn,
-          amount: b.amount,
-          due_day: b.due_day || 15,
-          category: b.category
-        })),
-        includeEmergencyFund: true,
-        emergencyAmount: 1000
+        next_payday_date: computedNextPayday,
+        nextPaydayDate: computedNextPayday,
+        bills: selectedBills
+          .filter(b => parseFloat(b.amount) > 0)
+          .map(b => ({
+            name: isTL ? (b.labelTl || b.labelEn) : (b.labelEn || b.labelTl),
+            amount: parseFloat(b.amount) || 0,
+            due_day: b.due_day || 15,
+            category: b.category || 'other'
+          })),
+        emergency_fund_contribution: 1000,
+        emergencyAmount: 1000,
+        includeEmergencyFund: true
       };
 
       const res = await api.completeFastTrackOnboarding(payload);
@@ -128,10 +143,10 @@ export function ConversationalOnboardingCard({ onComplete, setActiveTab }) {
         if (onComplete) {
           onComplete({
             name: name.trim(),
-            salary: activeSalary,
+            salary: finalSalary,
             dailyBudget: estimatedDaily,
             totalBills,
-            nextPayday
+            nextPayday: computedNextPayday
           });
         }
       }
