@@ -65,7 +65,7 @@ export default function App() {
           {activeTab === 'allowances' && <AllowancesPage />}
           {activeTab === 'wishlist' && <WishlistPage />}
           {activeTab === 'savings' && <SavingsPage />}
-          {activeTab === 'settings' && <SettingsPage />}
+          {activeTab === 'settings' && <SettingsPage setActiveTab={setActiveTab} />}
         </main>
       </div>
 

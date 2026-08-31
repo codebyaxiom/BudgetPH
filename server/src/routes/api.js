@@ -69,6 +69,7 @@ router.get('/reports/analytics', reports.getAnalytics);
 router.get('/settings', settings.getSettings);
 router.post('/settings/profile', settings.updateProfile);
 router.get('/settings/export', settings.exportData);
+router.post('/settings/reset-user-data', settings.resetUserData);
 
 // AI Chat & Training Dataset
 router.get('/ai/history', ai.getHistory);

@@ -1,4 +1,4 @@
-﻿import pool from '../config/db.js';
+import pool from '../config/db.js';
 
 export async function getSettings(req, res) {
   try {
@@ -78,3 +78,40 @@ export async function exportData(req, res) {
     res.status(500).json({ success: false, error: err.message });
   }
 }
+
+export async function resetUserData(req, res) {
+  const connection = await pool.getConnection();
+  try {
+    const userId = 1;
+    await connection.beginTransaction();
+
+    // Delete user-scoped records across all tables (isolated to userId)
+    await connection.query('DELETE FROM expenses WHERE user_id = ?', [userId]);
+    await connection.query('DELETE FROM obligation_payments WHERE user_id = ?', [userId]);
+    await connection.query('DELETE FROM obligations WHERE user_id = ?', [userId]);
+    await connection.query('DELETE FROM payday_allocations WHERE user_id = ?', [userId]);
+    await connection.query('DELETE FROM payday_cycles WHERE user_id = ?', [userId]);
+    await connection.query('DELETE FROM income_sources WHERE user_id = ?', [userId]);
+    await connection.query('DELETE FROM savings_transactions WHERE user_id = ?', [userId]);
+    await connection.query('DELETE FROM savings_goals WHERE user_id = ?', [userId]);
+    await connection.query('DELETE FROM allowances WHERE user_id = ?', [userId]);
+    await connection.query('DELETE FROM family_members WHERE user_id = ?', [userId]);
+    await connection.query('DELETE FROM wishlist_items WHERE user_id = ?', [userId]);
+    await connection.query('DELETE FROM utang WHERE user_id = ?', [userId]);
+    await connection.query('DELETE FROM ai_conversations WHERE user_id = ?', [userId]);
+    await connection.query('DELETE FROM ai_training_feedbacks WHERE user_id = ?', [userId]);
+
+    // Reset profile_completed status
+    await connection.query('UPDATE users SET profile_completed = 0 WHERE id = ?', [userId]);
+
+    await connection.commit();
+    res.json({ success: true, message: 'User personal financial data reset successfully.' });
+  } catch (err) {
+    await connection.rollback();
+    console.error('resetUserData error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  } finally {
+    connection.release();
+  }
+}
+

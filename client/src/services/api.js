@@ -81,6 +81,7 @@ export const fetchCalendarData = (month) => request(`/calendar${month ? `?month=
 export const fetchSettings = () => request('/settings');
 export const updateProfile = (payload) => request('/settings/profile', { method: 'POST', body: payload });
 export const exportData = () => request('/settings/export');
+export const resetUserData = () => request('/settings/reset-user-data', { method: 'POST' });
 
 // AI Chat & Model Training Dataset
 export const fetchAIHistory = (channel = 'general') => request(`/ai/history?channel=${channel}`);

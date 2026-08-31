@@ -4,7 +4,7 @@ import * as api from '../services/api';
 import { useBudgetStore } from '../stores/useBudgetStore';
 import { useLanguageStore } from '../stores/useLanguageStore';
 
-export function SettingsPage() {
+export function SettingsPage({ setActiveTab }) {
   const { loadDashboard, openOnboarding } = useBudgetStore();
   const { language, setLanguage, t } = useLanguageStore();
   const isTL = language === 'tl';
@@ -271,6 +271,42 @@ export function SettingsPage() {
         >
           <Download className="w-4 h-4 text-emerald-600" />
           <span>Download Dataset (SFT)</span>
+        </button>
+      </div>
+
+      {/* Danger Zone: Reset Financial Data / Fresh Start */}
+      <div className="bg-rose-50/60 dark:bg-rose-950/20 border-2 border-rose-500/30 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in">
+        <div>
+          <h3 className="text-base font-black text-rose-700 dark:text-rose-400 font-['Plus_Jakarta_Sans'] flex items-center gap-2">
+            <span className="text-lg">🧹</span>
+            <span>{isTL ? 'I-reset ang Aking Financial Data (Fresh Start)' : 'Reset My Personal Data (Fresh Start)'}</span>
+          </h3>
+          <p className="text-xs text-rose-800/80 dark:text-rose-300/80 mt-1 max-w-xl">
+            {isTL 
+              ? 'Buburahin ang lahat ng iyong mga expenses, bills, at cycle history para makapagsimula muli ng bagong onboarding setup. Ligtas ito at hindi maaapektuhan ang ibang mga user.' 
+              : 'Permanently deletes all your logged expenses, bills, and cycle history so you can restart onboarding fresh. Safe and does not affect other users.'}
+          </p>
+        </div>
+        <button
+          onClick={async () => {
+            const confirmPrompt = isTL
+              ? 'Sigurado ka ba na gusto mong i-reset ang lahat ng iyong budget records at magsimula mula sa simula? Hindi na ito mababawi.'
+              : 'Are you sure you want to reset all your personal budget records and start fresh? This action cannot be undone.';
+            if (!confirm(confirmPrompt)) return;
+            try {
+              const res = await api.resetUserData();
+              if (res.success) {
+                await loadDashboard();
+                alert(isTL ? 'Matagumpay na na-reset ang iyong datos! Dadalhin ka na sa AI setup.' : 'Your data has been reset! Redirecting to setup.');
+                if (setActiveTab) setActiveTab('ai');
+              }
+            } catch (err) {
+              alert('Reset error: ' + err.message);
+            }
+          }}
+          className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-black rounded-xl shadow-md transition cursor-pointer flex-shrink-0 active:scale-95"
+        >
+          <span>{isTL ? 'I-reset ang Data ⚠️' : 'Reset My Data ⚠️'}</span>
         </button>
       </div>
 
