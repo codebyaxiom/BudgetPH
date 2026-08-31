@@ -686,6 +686,28 @@ export function AIChatPage({ setActiveTab }) {
                         </div>
                       )}
 
+                      {/* Update Obligation / Bill Action Card */}
+                      {receipt.action_type === 'update_obligation' && (
+                        <div className="p-3.5 rounded-2xl bg-blue-500/10 border border-blue-500/30 text-xs flex items-center justify-between shadow-sm">
+                          <div>
+                            <p className="font-bold text-blue-900 dark:text-blue-300 flex items-center gap-1.5">
+                              <span>✏️</span>
+                              <span>{receipt.data.name} (₱${Number(receipt.data.amount).toLocaleString()})</span>
+                            </p>
+                            <p className="text-[10px] text-blue-700/80 dark:text-blue-400/80 mt-0.5">
+                              {isTL ? `Na-update ang detalye · Due tuwing ika-${receipt.data.due_day}` : `Updated details · Due every ${receipt.data.due_day}th`}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => setActiveTab && setActiveTab('obligations')}
+                            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-[11px] transition flex items-center gap-1 cursor-pointer"
+                          >
+                            <span>{t('obligations')}</span>
+                            <ArrowRight className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
+
                       {/* Savings Deposit Action Card */}
                       {receipt.action_type === 'deposit_to_savings' && (
                         <div className="p-3.5 rounded-2xl bg-teal-500/10 border border-teal-500/30 text-xs flex items-center justify-between shadow-sm">

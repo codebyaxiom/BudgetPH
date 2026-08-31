@@ -125,12 +125,65 @@ export const aiToolDefinitions = [
             type: 'number',
             description: 'Target end year (e.g. 2026)'
           },
+          is_variable: {
+            type: 'boolean',
+            description: 'True if amount changes every month (e.g. Electricity, Water)'
+          },
           notes: {
             type: 'string',
             description: 'Optional additional details or context'
           }
         },
-        required: ['name', 'amount']
+        required: ['name']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'update_obligation',
+      description: 'Updates, edits, or adjusts an existing bill, variable utility (electricity/water), or installment debt (e.g. modify amount, due day, end month/year, or toggle variable status).',
+      parameters: {
+        type: 'object',
+        properties: {
+          bill_name: {
+            type: 'string',
+            description: 'Name or keyword of the bill or debt to edit (e.g. "Electricity", "Meralco", "Utang Aunt Maria")'
+          },
+          new_name: {
+            type: 'string',
+            description: 'Optional new name for the bill'
+          },
+          amount: {
+            type: 'number',
+            description: 'New monthly or estimated amount in PHP'
+          },
+          due_day: {
+            type: 'number',
+            description: 'New due day of the month (1 to 31)'
+          },
+          category: {
+            type: 'string',
+            enum: ['electricity', 'water', 'rent', 'internet', 'loan', 'credit_card', 'insurance', 'subscription', 'other']
+          },
+          is_variable: {
+            type: 'boolean',
+            description: 'True if amount fluctuates every month (e.g. electricity, water)'
+          },
+          is_installment: {
+            type: 'boolean',
+            description: 'True if fixed-term installment debt'
+          },
+          end_month: {
+            type: 'number',
+            description: 'New target end month (1 to 12)'
+          },
+          end_year: {
+            type: 'number',
+            description: 'New target end year (e.g. 2026)'
+          }
+        },
+        required: ['bill_name']
       }
     }
   },
@@ -469,11 +522,40 @@ export async function executeAiTool(name, args, userId = 1) {
 
       case 'add_obligation_or_debt': {
         const name = args.name;
-        const amount = parseFloat(args.amount);
         const dueDay = parseInt(args.due_day, 10) || 15;
         const validCategories = ['electricity','water','internet','rent','loan','credit_card','insurance','subscriptions','school','other'];
-        const category = validCategories.includes(args.category) ? args.category : 'loan';
+        const category = validCategories.includes(args.category) ? args.category : (name.toLowerCase().includes('kuryente') || name.toLowerCase().includes('meralco') ? 'electricity' : (name.toLowerCase().includes('tubig') || name.toLowerCase().includes('maynilad') ? 'water' : 'loan'));
         const notes = args.notes || '';
+
+        // Smart prediction for variable utilities if amount is omitted
+        let amount = parseFloat(args.amount);
+        let isEstimated = false;
+        if (isNaN(amount) || amount <= 0) {
+          isEstimated = true;
+          const [pastPayments] = await pool.query(
+            `SELECT op.amount_paid 
+             FROM obligation_payments op 
+             JOIN obligations o ON op.obligation_id = o.id 
+             WHERE o.user_id = ? AND o.category = ? 
+             ORDER BY op.paid_date DESC LIMIT 1`,
+            [userId, category]
+          );
+          if (pastPayments.length > 0 && pastPayments[0].amount_paid) {
+            amount = parseFloat(pastPayments[0].amount_paid);
+          } else if (category === 'electricity' || name.toLowerCase().includes('kuryente') || name.toLowerCase().includes('meralco')) {
+            amount = 1500;
+          } else if (category === 'water' || name.toLowerCase().includes('tubig') || name.toLowerCase().includes('maynilad')) {
+            amount = 450;
+          } else if (category === 'internet' || name.toLowerCase().includes('wifi')) {
+            amount = 1500;
+          } else {
+            amount = 1000;
+          }
+        }
+
+        const isVariable = args.is_variable !== undefined 
+          ? (args.is_variable ? 1 : 0) 
+          : (category === 'electricity' || category === 'water' || name.toLowerCase().includes('kuryente') || name.toLowerCase().includes('tubig') ? 1 : 0);
 
         const currentMonth = new Date().getMonth() + 1;
         const currentYear = new Date().getFullYear();
@@ -514,9 +596,9 @@ export async function executeAiTool(name, args, userId = 1) {
             user_id, name, amount, category, due_day, cutoff_assignment, is_variable, is_active, notes,
             is_installment, total_amount, remaining_balance, monthly_amount, end_month, end_year, status
           )
-          VALUES (?, ?, ?, ?, ?, 'auto', 0, 1, ?, ?, ?, ?, ?, ?, ?, 'active')`,
+          VALUES (?, ?, ?, ?, ?, 'auto', ?, 1, ?, ?, ?, ?, ?, ?, ?, 'active')`,
           [
-            userId, name, amount, category, dueDay, notes,
+            userId, name, amount, category, dueDay, isVariable, notes,
             isInstallment, totalAmount, remainingBalance, amount, endMonth, endYear
           ]
         );
@@ -526,18 +608,93 @@ export async function executeAiTool(name, args, userId = 1) {
           action_type: 'add_obligation_or_debt',
           summary: isInstallment
             ? `Added installment debt: ${name} (₱${amount.toLocaleString()}/mo until ${endMonth}/${endYear}).`
-            : `Added obligation: ${name} (₱${amount.toLocaleString()}) due every ${dueDay}th.`,
+            : isVariable
+              ? `Added variable utility: ${name} (Estimated ₱${amount.toLocaleString()}/mo based on previous bills).`
+              : `Added obligation: ${name} (₱${amount.toLocaleString()}) due every ${dueDay}th.`,
           data: {
             obligation_id: res.insertId,
             name,
             amount,
             due_day: dueDay,
             category,
+            is_variable: Boolean(isVariable),
+            is_estimated: isEstimated,
             is_installment: Boolean(isInstallment),
             end_month: endMonth,
             end_year: endYear,
             total_amount: totalAmount,
             remaining_balance: remainingBalance
+          }
+        };
+      }
+
+      case 'update_obligation': {
+        const rawBill = (args.bill_name || '').toLowerCase().trim();
+        const [allObs] = await pool.query(
+          `SELECT * FROM obligations WHERE user_id = ? AND is_active = 1`,
+          [userId]
+        );
+
+        let target = allObs.find(o => {
+          const oName = o.name.toLowerCase();
+          return oName.includes(rawBill) || rawBill.includes(oName);
+        });
+
+        if (!target) {
+          return {
+            success: false,
+            action_type: 'update_obligation',
+            summary: `Could not find an active bill or debt matching "${args.bill_name}".`,
+            data: { bill_name: args.bill_name }
+          };
+        }
+
+        const newName = args.new_name || target.name;
+        const newAmount = args.amount !== undefined ? parseFloat(args.amount) : parseFloat(target.amount);
+        const newDueDay = args.due_day !== undefined ? parseInt(args.due_day, 10) : target.due_day;
+        const newCategory = args.category || target.category;
+        const newIsVariable = args.is_variable !== undefined ? (args.is_variable ? 1 : 0) : target.is_variable;
+        const newIsInstallment = args.is_installment !== undefined ? (args.is_installment ? 1 : 0) : target.is_installment;
+        const newEndMonth = args.end_month !== undefined ? parseInt(args.end_month, 10) : target.end_month;
+        const newEndYear = args.end_year !== undefined ? parseInt(args.end_year, 10) : (target.end_year || new Date().getFullYear());
+
+        const currentMonth = new Date().getMonth() + 1;
+        const currentYear = new Date().getFullYear();
+        let totalAmount = target.total_amount;
+        let remainingBalance = target.remaining_balance;
+
+        if (newIsInstallment && newEndMonth) {
+          const totalMonths = Math.max(1, (newEndYear - currentYear) * 12 + (newEndMonth - currentMonth) + 1);
+          totalAmount = totalMonths * newAmount;
+          remainingBalance = totalAmount;
+        }
+
+        await pool.query(
+          `UPDATE obligations
+           SET name = ?, amount = ?, due_day = ?, category = ?, is_variable = ?, is_installment = ?,
+               end_month = ?, end_year = ?, total_amount = ?, remaining_balance = ?, monthly_amount = ?
+           WHERE id = ? AND user_id = ?`,
+          [
+            newName, newAmount, newDueDay, newCategory, newIsVariable, newIsInstallment,
+            newEndMonth, newEndYear, totalAmount, remainingBalance, newAmount,
+            target.id, userId
+          ]
+        );
+
+        return {
+          success: true,
+          action_type: 'update_obligation',
+          summary: `Updated bill "${newName}" (₱${newAmount.toLocaleString()}, Due ${newDueDay}th).`,
+          data: {
+            obligation_id: target.id,
+            name: newName,
+            amount: newAmount,
+            due_day: newDueDay,
+            category: newCategory,
+            is_variable: Boolean(newIsVariable),
+            is_installment: Boolean(newIsInstallment),
+            end_month: newEndMonth,
+            end_year: newEndYear
           }
         };
       }

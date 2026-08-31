@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { 
   Receipt, Plus, CheckCircle2, RotateCcw, Trash2, Calendar, Tag, 
   AlertTriangle, Clock, AlertCircle, Sparkles, ArrowRight, ShieldCheck,
-  TrendingDown, DollarSign, CalendarCheck
+  TrendingDown, DollarSign, CalendarCheck, Edit3, HelpCircle
 } from 'lucide-react';
 import * as api from '../services/api';
 import { useBudgetStore } from '../stores/useBudgetStore';
@@ -10,9 +10,9 @@ import { useLanguageStore } from '../stores/useLanguageStore';
 import { getBillDueStatus } from '../utils/billStatus';
 
 const CATEGORY_NAMES = {
-  electricity: { en: 'Electricity / Power', tl: 'Kuryente / Power' },
-  water: { en: 'Water Bill', tl: 'Tubig / Water' },
-  internet: { en: 'Internet / Wifi', tl: 'Internet / Wifi' },
+  electricity: { en: 'Electricity / Power (Meralco)', tl: 'Kuryente / Power (Meralco)' },
+  water: { en: 'Water Bill (Maynilad/Manila Water)', tl: 'Tubig / Water' },
+  internet: { en: 'Internet / Wifi (PLDT/Converge)', tl: 'Internet / Wifi' },
   rent: { en: 'House Rent', tl: 'Upa sa Bahay' },
   loan: { en: 'Loan / Debt (Utang)', tl: 'Utang / Loan' },
   credit_card: { en: 'Credit Card', tl: 'Credit Card' },
@@ -33,13 +33,14 @@ export function ObligationsPage() {
   const [obligations, setObligations] = useState([]);
   const [filter, setFilter] = useState('all');
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [editingObligation, setEditingObligation] = useState(null);
   
-  // Add Form State
+  // Add/Edit Form State
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [dueDay, setDueDay] = useState('15');
   const [category, setCategory] = useState('electricity');
-  const [isVariable, setIsVariable] = useState(false);
+  const [isVariable, setIsVariable] = useState(true);
   const [isInstallment, setIsInstallment] = useState(false);
   const [endMonth, setEndMonth] = useState(12);
   const [endYear, setEndYear] = useState(new Date().getFullYear());
@@ -59,11 +60,42 @@ export function ObligationsPage() {
     loadData();
   }, []);
 
+  const handleOpenAdd = () => {
+    setEditingObligation(null);
+    setName('');
+    setAmount('');
+    setDueDay('15');
+    setCategory('electricity');
+    setIsVariable(true);
+    setIsInstallment(false);
+    setEndMonth(12);
+    setEndYear(new Date().getFullYear());
+    setCreditorName('');
+    setIsAddOpen(true);
+  };
+
+  const handleOpenEdit = (ob) => {
+    setEditingObligation(ob);
+    setName(ob.name || '');
+    setAmount(ob.monthly_amount || ob.amount || '');
+    setDueDay(String(ob.due_day || 15));
+    setCategory(ob.category || 'electricity');
+    setIsVariable(Boolean(ob.is_variable));
+    setIsInstallment(Boolean(ob.is_installment));
+    setEndMonth(ob.end_month || 12);
+    setEndYear(ob.end_year || new Date().getFullYear());
+    setCreditorName(ob.creditor_name || '');
+    setIsAddOpen(true);
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
+    const finalAmt = amount ? parseFloat(amount) : (category === 'electricity' ? 1500 : (category === 'water' ? 450 : 1000));
+    
     await api.saveObligation({
+      id: editingObligation?.id,
       name,
-      amount: parseFloat(amount),
+      amount: finalAmt,
       due_day: parseInt(dueDay),
       category,
       is_variable: isVariable,
@@ -75,14 +107,16 @@ export function ObligationsPage() {
     setName('');
     setAmount('');
     setIsInstallment(false);
+    setIsVariable(false);
     setCreditorName('');
+    setEditingObligation(null);
     setIsAddOpen(false);
     await loadData();
     await loadDashboard();
   };
 
   const handleOpenPaymentModal = (ob) => {
-    if (ob.is_installment) {
+    if (isInstOb(ob)) {
       setActivePaymentModalOb(ob);
       setAdvanceMonths(1);
       setCustomAdvanceAmount(ob.monthly_amount || ob.amount);
@@ -134,6 +168,7 @@ export function ObligationsPage() {
   const overdueBills = obligations.filter(o => !o.is_paid && o.is_active && getBillDueStatus(o.due_day, o.is_paid, language).isOverdue);
   const dueTodayBills = obligations.filter(o => !o.is_paid && o.is_active && getBillDueStatus(o.due_day, o.is_paid, language).isDueToday);
   const installmentDebts = obligations.filter(o => isInstOb(o));
+  const variableBills = obligations.filter(o => Boolean(o.is_variable) && o.is_active);
   const completedDebts = obligations.filter(o => o.status === 'completed' || (!o.is_active && isInstOb(o)));
   const totalOverdueAmount = overdueBills.reduce((sum, o) => sum + parseFloat(o.amount || 0), 0);
 
@@ -144,8 +179,8 @@ export function ObligationsPage() {
     if (filter === 'paid') return o.is_paid;
     if (filter === 'pending') return !o.is_paid && o.is_active;
     if (filter === 'installments') return isInstOb(o) && o.is_active;
+    if (filter === 'variable') return Boolean(o.is_variable) && o.is_active;
     if (filter === 'completed') return o.status === 'completed' || (!o.is_active && isInstOb(o));
-    if (filter === 'variable') return o.is_variable && o.is_active;
     return o.is_active || filter === 'all';
   });
 
@@ -154,6 +189,7 @@ export function ObligationsPage() {
     { id: 'overdue', labelEn: `🚨 Overdue (${overdueBills.length})`, labelTl: `🚨 Lipas na (${overdueBills.length})`, count: overdueBills.length, isUrgent: overdueBills.length > 0 },
     { id: 'due_soon', labelEn: '⏳ Due Soon / Today', labelTl: '⏳ Nearing Due', count: dueTodayBills.length },
     { id: 'installments', labelEn: `⏳ Installments & Utang (${installmentDebts.filter(d=>d.is_active).length})`, labelTl: `⏳ Hulugan at Utang (${installmentDebts.filter(d=>d.is_active).length})` },
+    { id: 'variable', labelEn: `📊 Variable Utilities (${variableBills.length})`, labelTl: `📊 Pabago-bago (${variableBills.length})` },
     { id: 'pending', labelEn: 'Pending Bills', labelTl: 'Hindi Pa Bayad' },
     { id: 'paid', labelEn: 'Paid Bills', labelTl: 'Bayad Na' },
     { id: 'completed', labelEn: `🎉 Fully Paid (${completedDebts.length})`, labelTl: `🎉 Bayad na Lahat (${completedDebts.length})` }
@@ -171,13 +207,13 @@ export function ObligationsPage() {
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
             {isTL 
-              ? 'Subaybayan ang kuryente, tubig, internet, at fixed-term utang na may advance payment reduction.' 
-              : 'Track utilities, rent, and fixed-term installment debts with automatic advance payment reduction.'}
+              ? 'Subaybayan ang kuryente, tubig, internet, at fixed-term utang na may smart estimation at advance payments.' 
+              : 'Track electricity, water, internet, and fixed-term installment debts with smart predictions and advance payment options.'}
           </p>
         </div>
 
         <button
-          onClick={() => setIsAddOpen(true)}
+          onClick={handleOpenAdd}
           className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-sm shadow-md transition flex items-center gap-2 cursor-pointer self-start sm:self-auto hover:scale-[1.02] active:scale-95"
         >
           <Plus className="w-4 h-4" />
@@ -307,7 +343,7 @@ export function ObligationsPage() {
                   </div>
 
                   <div className="my-3 space-y-2">
-                    <div className="flex items-baseline gap-2">
+                    <div className="flex items-baseline gap-2 flex-wrap">
                       <span className={`text-2xl font-black font-['Plus_Jakarta_Sans'] tracking-tight ${
                         isCompleted
                           ? 'text-slate-400 dark:text-slate-600 line-through'
@@ -322,7 +358,7 @@ export function ObligationsPage() {
                       </span>
                       {Boolean(ob.is_variable) && (
                         <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 text-[10px] font-bold rounded-full border border-purple-200 dark:border-purple-800">
-                          {isTL ? 'Pabago-bago' : 'Variable Est.'}
+                          {isTL ? 'Pabago-bago (Est.)' : 'Variable Est.'}
                         </span>
                       )}
                     </div>
@@ -394,13 +430,25 @@ export function ObligationsPage() {
                     </button>
                   )}
 
-                  <button
-                    onClick={() => handleDelete(ob)}
-                    className="p-2 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition cursor-pointer"
-                    title={isTL ? 'Tanggalin ang bayarin' : 'Delete obligation'}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    {/* Edit Button */}
+                    <button
+                      onClick={() => handleOpenEdit(ob)}
+                      className="p-2 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-xl transition cursor-pointer"
+                      title={isTL ? 'I-edit ang bayarin' : 'Edit obligation'}
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+
+                    {/* Delete Button */}
+                    <button
+                      onClick={() => handleDelete(ob)}
+                      className="p-2 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition cursor-pointer"
+                      title={isTL ? 'Tanggalin ang bayarin' : 'Delete obligation'}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -502,18 +550,51 @@ export function ObligationsPage() {
         </div>
       )}
 
-      {/* Add Obligation Modal */}
+      {/* Add / Edit Obligation Modal */}
       {isAddOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-md w-full p-6 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-bold text-slate-900 dark:text-slate-50 mb-1 font-['Plus_Jakarta_Sans']">
-              {isTL ? 'Magdagdag ng Bagong Bayarin / Utang 📋' : 'Add New Obligation / Debt 📋'}
+              {editingObligation 
+                ? (isTL ? 'I-edit ang Bayarin / Utang ✏️' : 'Edit Obligation / Debt ✏️')
+                : (isTL ? 'Magdagdag ng Bagong Bayarin / Utang 📋' : 'Add New Obligation / Debt 📋')}
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
               {isTL ? 'Ilista ang fixed bills, utilities, o utang na may takdang buwan.' : 'Enter bill details to automatically reserve budget on payday.'}
             </p>
 
             <form onSubmit={handleSave} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5">
+                  {isTL ? 'Kategorya' : 'Category'}
+                </label>
+                <select
+                  value={category}
+                  onChange={(e) => {
+                    const newCat = e.target.value;
+                    setCategory(newCat);
+                    if (newCat === 'electricity' || newCat === 'water') {
+                      setIsVariable(true);
+                      if (!name) setName(newCat === 'electricity' ? 'Electricity (Meralco)' : 'Water Bill');
+                      if (!amount) setAmount(newCat === 'electricity' ? '1500' : '450');
+                    } else if (newCat === 'loan') {
+                      setIsInstallment(true);
+                      setIsVariable(false);
+                    }
+                  }}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 text-sm font-semibold"
+                >
+                  <option value="electricity">Electricity / Power (Kuryente/Meralco)</option>
+                  <option value="water">Water Bill (Tubig/Maynilad/Manila Water)</option>
+                  <option value="internet">Internet / Wifi (PLDT/Converge/Globe)</option>
+                  <option value="rent">House Rent (Upa sa Bahay)</option>
+                  <option value="loan">Loan / Personal Debt (Utang kay Aunt/Tito)</option>
+                  <option value="credit_card">Credit Card</option>
+                  <option value="phone">Phone & Load</option>
+                  <option value="other">Other Obligation</option>
+                </select>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5">
                   {isTL ? 'Pangalan ng Bayarin / Utang' : 'Bill / Debt Name'}
@@ -523,7 +604,7 @@ export function ObligationsPage() {
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Utang kay Aunt Maria, Meralco, Converge, SSS Loan"
+                  placeholder="e.g. Meralco, Maynilad, Converge, Utang kay Aunt Maria"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 text-sm font-semibold focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
@@ -531,17 +612,23 @@ export function ObligationsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5">
-                    {isInstallment ? (isTL ? 'Halaga Bawat Buwan (₱)' : 'Monthly Payment (₱)') : (isTL ? 'Halaga (₱)' : 'Amount (₱)')}
+                    {isVariable 
+                      ? (isTL ? 'Tinatayang Halaga (₱ Est.)' : 'Estimated Amount (₱)') 
+                      : (isInstallment ? (isTL ? 'Halaga Bawat Buwan (₱)' : 'Monthly Payment (₱)') : (isTL ? 'Halaga (₱)' : 'Amount (₱)'))}
                   </label>
                   <input
                     type="number"
                     step="0.01"
-                    required
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    placeholder="2000.00"
+                    placeholder={isVariable ? (category === 'electricity' ? '1500.00 (Est)' : '450.00 (Est)') : '2000.00'}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 font-black text-base focus:ring-2 focus:ring-emerald-500"
                   />
+                  {isVariable && (
+                    <span className="text-[10px] text-purple-600 dark:text-purple-400 font-semibold block mt-1">
+                      {isTL ? '💡 Awtomatikong mag-aadjust sa actual bill pag nagbayad.' : '💡 Rolling prediction based on past payments.'}
+                    </span>
+                  )}
                 </div>
 
                 <div>
@@ -560,24 +647,18 @@ export function ObligationsPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5">
-                  {isTL ? 'Kategorya' : 'Category'}
+              {/* Variable Bill Checkbox */}
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="isVar"
+                  checked={isVariable}
+                  onChange={(e) => setIsVariable(e.target.checked)}
+                  className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 cursor-pointer"
+                />
+                <label htmlFor="isVar" className="text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
+                  {isTL ? 'Pabago-bago ang halaga bawat buwan (Variable: Kuryente, Tubig)' : 'Amount fluctuates every month (Variable: Electricity, Water)'}
                 </label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 text-sm font-semibold"
-                >
-                  <option value="electricity">Electricity (Kuryente)</option>
-                  <option value="water">Water (Tubig)</option>
-                  <option value="internet">Internet / Wifi</option>
-                  <option value="rent">House Rent (Upa)</option>
-                  <option value="loan">Loan / Personal Debt (Utang)</option>
-                  <option value="credit_card">Credit Card</option>
-                  <option value="phone">Phone & Load</option>
-                  <option value="other">Other Obligation</option>
-                </select>
               </div>
 
               {/* Installment / Fixed-Term Checkbox */}
@@ -591,6 +672,7 @@ export function ObligationsPage() {
                       setIsInstallment(e.target.checked);
                       if (e.target.checked && category !== 'loan') {
                         setCategory('loan');
+                        setIsVariable(false);
                       }
                     }}
                     className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
@@ -638,7 +720,10 @@ export function ObligationsPage() {
               <div className="flex justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setIsAddOpen(false)}
+                  onClick={() => {
+                    setIsAddOpen(false);
+                    setEditingObligation(null);
+                  }}
                   className="px-4 py-2.5 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl transition cursor-pointer"
                 >
                   {isTL ? 'Kanselahin' : 'Cancel'}
@@ -647,7 +732,9 @@ export function ObligationsPage() {
                   type="submit"
                   className="px-5 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-md transition cursor-pointer"
                 >
-                  {isTL ? 'I-save ang Bayarin' : 'Save Obligation'}
+                  {editingObligation 
+                    ? (isTL ? 'I-update ang Bayarin' : 'Update Obligation')
+                    : (isTL ? 'I-save ang Bayarin' : 'Save Obligation')}
                 </button>
               </div>
             </form>
