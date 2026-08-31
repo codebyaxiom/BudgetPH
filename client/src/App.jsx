@@ -70,7 +70,6 @@ export default function App() {
       </div>
 
       <LogExpenseModal />
-      <FastTrackOnboardingModal isOpen={isOnboardingOpen} onClose={closeOnboarding} />
     </div>
   );
 }

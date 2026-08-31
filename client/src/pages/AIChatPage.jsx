@@ -8,6 +8,7 @@ import * as api from '../services/api';
 import { useBudgetStore } from '../stores/useBudgetStore';
 import { useLanguageStore } from '../stores/useLanguageStore';
 import { parseMarkdown } from '../utils/markdownParser';
+import { ConversationalOnboardingCard } from '../components/common/ConversationalOnboardingCard';
 
 const CHANNELS = [
   { id: 'general', icon: '🌟', labelEn: 'All-in-One', labelTl: 'Lahat (General)', color: 'emerald' },
@@ -233,6 +234,23 @@ export function AIChatPage({ setActiveTab }) {
     }
   };
 
+  const handleOnboardingComplete = async ({ name, salary, dailyBudget, totalBills, nextPayday }) => {
+    const celebrationMsg = isTL
+      ? `Mabuhay, **${name}**! 🎉 Tagumpay nating naitakda ang iyong personal budget blueprint:\n\n• **Sahod kada Cut-off:** ₱${Number(salary).toLocaleString()}\n• **Nakatagang Bills:** ₱${Number(totalBills).toLocaleString()}\n• **Awtomatikong Daily Budget:** ₱${Number(dailyBudget).toLocaleString()} / araw\n• **Susunod na Sahod:** ${nextPayday}\n\nHanda na ang iyong Dashboard, Daily Budget, at Payday Simulator! Paano kita matutulungan ngayon?\n\n<!-- CHOICES: ["Tingnan ang Dashboard 🚀", "I-simulate ang Payday 💰", "Magkano safe spendable ko today?"] -->`
+      : `Welcome, **${name}**! 🎉 Your personal financial blueprint is ready:\n\n• **Salary per Cut-off:** ₱${Number(salary).toLocaleString()}\n• **Allocated Bills:** ₱${Number(totalBills).toLocaleString()}\n• **Daily Safe Spending Limit:** ₱${Number(dailyBudget).toLocaleString()} / day\n• **Next Payday:** ${nextPayday}\n\nYour Dashboard, Daily Budget, and Payday Simulator are all set! How can I help you today?\n\n<!-- CHOICES: ["View Dashboard 🚀", "Simulate Payday 💰", "What is my daily spendable?"] -->`;
+
+    setMessages(prev => [
+      ...prev,
+      {
+        role: 'assistant',
+        message: celebrationMsg,
+        engine: 'local',
+        model: 'BudgetPH Financial Blueprint Engine'
+      }
+    ]);
+    await loadDashboard();
+  };
+
   const handleClear = async () => {
     const activeChObj = CHANNELS.find(c => c.id === activeChannel);
     const chLabel = isTL ? activeChObj?.labelTl : activeChObj?.labelEn;
@@ -383,6 +401,15 @@ export function AIChatPage({ setActiveTab }) {
 
       {/* 3. Messages Stream */}
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 select-text">
+        
+        {/* Embedded Fast-Track Onboarding Card if profile is not completed */}
+        {Boolean(user && !user.profile_completed) && (
+          <ConversationalOnboardingCard 
+            onComplete={handleOnboardingComplete} 
+            setActiveTab={setActiveTab} 
+          />
+        )}
+
         {messages.map((m, idx) => {
           const isUser = m.role === 'user';
           const isGroq = m.engine === 'groq';
@@ -490,7 +517,17 @@ export function AIChatPage({ setActiveTab }) {
                       {choices.map((choice, cIdx) => (
                         <button
                           key={cIdx}
-                          onClick={() => handleSend(choice)}
+                          onClick={() => {
+                            if (choice.includes('Dashboard')) {
+                              setActiveTab && setActiveTab('dashboard');
+                              return;
+                            }
+                            if (choice.includes('Payday') || choice.includes('Sahod')) {
+                              setActiveTab && setActiveTab('payday');
+                              return;
+                            }
+                            handleSend(choice);
+                          }}
                           className="px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/80 border border-emerald-300/80 dark:border-emerald-700/80 text-emerald-800 dark:text-emerald-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm hover:scale-[1.02] active:scale-95 cursor-pointer text-left"
                         >
                           <span className="text-emerald-600 dark:text-emerald-400">👉</span>
