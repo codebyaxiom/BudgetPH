@@ -31,9 +31,13 @@ export function AIChatPage({ setActiveTab }) {
   const [aiMode, setAiMode] = useState(localStorage.getItem('budgetph_ai_mode') || 'auto');
   const [copiedIdx, setCopiedIdx] = useState(null);
   const [feedbackState, setFeedbackState] = useState({}); // { [msgIdx]: 'positive' | 'negative' }
+  const [forceShowSetupCard, setForceShowSetupCard] = useState(false);
   const messagesEndRef = useRef(null);
 
   const user = dashboardData?.user;
+  const isProfileIncomplete = !user || Number(user?.profile_completed || 0) === 0 || !dashboardData?.active_cycle;
+  const shouldShowSetupCard = isProfileIncomplete || forceShowSetupCard;
+
   const remainingToday = dashboardData?.remaining_today ?? dashboardData?.metrics?.remaining_today ?? 0;
   const daysUntilPayday = dashboardData?.days_until_payday ?? dashboardData?.metrics?.days_until_payday ?? 0;
   const upcomingBills = dashboardData?.upcoming_bills || dashboardData?.obligations || [];
@@ -329,14 +333,24 @@ export function AIChatPage({ setActiveTab }) {
         </div>
 
         <div className="flex items-center gap-2 overflow-x-auto">
-          <button
-            onClick={() => setActiveTab && setActiveTab('daily')}
-            title="Click to open Daily Spending Log"
-            className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800/90 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 border border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
-          >
-            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span>₱{Number(remainingToday).toLocaleString()} {isTL ? 'Today' : 'Today'}</span>
-          </button>
+          {isProfileIncomplete ? (
+            <button
+              onClick={() => setForceShowSetupCard(prev => !prev)}
+              className="px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap animate-pulse"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>{isTL ? '✨ I-setup ang Badyet' : '✨ Setup My Budget'}</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => setActiveTab && setActiveTab('daily')}
+              title="Click to open Daily Spending Log"
+              className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800/90 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 border border-slate-200 dark:border-slate-700/60 text-slate-700 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span>₱{Number(remainingToday).toLocaleString()} {isTL ? 'Today' : 'Today'}</span>
+            </button>
+          )}
 
           <button
             onClick={() => setActiveTab && setActiveTab('payday')}
@@ -403,9 +417,12 @@ export function AIChatPage({ setActiveTab }) {
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 select-text">
         
         {/* Embedded Fast-Track Onboarding Card if profile is not completed */}
-        {Boolean(user && !user.profile_completed) && (
+        {shouldShowSetupCard && (
           <ConversationalOnboardingCard 
-            onComplete={handleOnboardingComplete} 
+            onComplete={(data) => {
+              setForceShowSetupCard(false);
+              handleOnboardingComplete(data);
+            }} 
             setActiveTab={setActiveTab} 
           />
         )}
