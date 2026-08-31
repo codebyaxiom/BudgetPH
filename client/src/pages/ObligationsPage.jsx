@@ -118,8 +118,8 @@ export function ObligationsPage() {
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
             {isTL 
-              ? 'Pamahalaan ang mga fixed at variable na bayarin (Meralco, Maynilad, Upa, Internet, Utang).'
-              : 'Track and manage fixed and variable monthly commitments with automatic overdue reminders.'}
+              ? 'Pamahalaan ang mga fixed at variable na bayarin (Kuryente, Tubig, Upa, Internet, Utang).'
+              : 'Track and manage fixed and variable monthly commitments (Electricity, Water, Rent, Internet, Loans).'}
           </p>
         </div>
 

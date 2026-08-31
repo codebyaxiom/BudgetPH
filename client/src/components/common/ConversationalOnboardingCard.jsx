@@ -8,12 +8,12 @@ import { useBudgetStore } from '../../stores/useBudgetStore';
 import { useLanguageStore } from '../../stores/useLanguageStore';
 
 const DEFAULT_BILLS = [
-  { id: 'electricity', labelEn: 'Electricity (Meralco)', labelTl: 'Kuryente (Meralco)', category: 'electricity', amount: 2000, due_day: 18, selected: true, icon: '⚡' },
-  { id: 'water', labelEn: 'Water (Maynilad)', labelTl: 'Tubig (Maynilad)', category: 'water', amount: 500, due_day: 22, selected: true, icon: '💧' },
+  { id: 'electricity', labelEn: 'Electricity Bill', labelTl: 'Kuryente (Electricity)', category: 'electricity', amount: 2000, due_day: 18, selected: true, icon: '⚡' },
+  { id: 'water', labelEn: 'Water Bill', labelTl: 'Tubig (Water Bill)', category: 'water', amount: 500, due_day: 22, selected: true, icon: '💧' },
   { id: 'internet', labelEn: 'Internet / Wifi', labelTl: 'Internet / Wifi', category: 'internet', amount: 1500, due_day: 25, selected: true, icon: '🌐' },
-  { id: 'rent', labelEn: 'House Rent / Upa', labelTl: 'Upa sa Bahay (Rent)', category: 'rent', amount: 5000, due_day: 1, selected: true, icon: '🏠' },
-  { id: 'loan', labelEn: 'Loans / Cards / Utang', labelTl: 'Loans / Cards / Utang', category: 'credit_card', amount: 2000, due_day: 5, selected: false, icon: '💳' },
-  { id: 'phone', labelEn: 'Mobile Load', labelTl: 'Load / Phone', category: 'phone', amount: 500, due_day: 15, selected: false, icon: '📱' }
+  { id: 'rent', labelEn: 'House Rent', labelTl: 'Upa sa Bahay (Rent)', category: 'rent', amount: 5000, due_day: 1, selected: true, icon: '🏠' },
+  { id: 'loan', labelEn: 'Loans & Cards / Utang', labelTl: 'Loans / Cards / Utang', category: 'credit_card', amount: 2000, due_day: 5, selected: false, icon: '💳' },
+  { id: 'phone', labelEn: 'Mobile Load / Phone', labelTl: 'Load / Phone', category: 'phone', amount: 500, due_day: 15, selected: false, icon: '📱' }
 ];
 
 const PRESET_SALARIES = [10000, 15000, 20000, 25000, 30000, 40000];
