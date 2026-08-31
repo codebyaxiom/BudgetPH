@@ -36,24 +36,23 @@ export async function getObligations(req, res) {
     );
 
     const formatted = obligations.map(ob => {
-      const isLoanOrUtang = ob.category === 'loan' || (ob.name && ob.name.toLowerCase().includes('utang'));
-      const isInst = Boolean(Number(ob.is_installment || 0)) || isLoanOrUtang;
+      const isInst = Boolean(Number(ob.is_installment || 0)) || (ob.end_month !== null && ob.end_month !== undefined);
       
       const monthly = parseFloat(ob.monthly_amount || ob.amount);
-      const endM = ob.end_month || 12;
-      const endY = ob.end_year || currentYear;
-      const totalMonths = Math.max(1, (endY - currentYear) * 12 + (endM - currentMonth) + 1);
-      const total = ob.total_amount ? parseFloat(ob.total_amount) : (totalMonths * monthly);
+      const endM = ob.end_month;
+      const endY = ob.end_year;
+      const totalMonths = isInst && endM && endY ? Math.max(1, (endY - currentYear) * 12 + (endM - currentMonth) + 1) : 1;
+      const total = ob.total_amount ? parseFloat(ob.total_amount) : (isInst && endM ? (totalMonths * monthly) : monthly);
       const rem = ob.remaining_balance !== null && ob.remaining_balance !== undefined ? parseFloat(ob.remaining_balance) : total;
 
       return {
         ...ob,
         is_paid: Boolean(ob.is_paid),
         is_installment: isInst,
-        end_month: isInst ? endM : ob.end_month,
-        end_year: isInst ? endY : ob.end_year,
-        total_amount: isInst ? total : ob.total_amount,
-        remaining_balance: isInst ? rem : ob.remaining_balance,
+        end_month: isInst ? endM : null,
+        end_year: isInst ? endY : null,
+        total_amount: total,
+        remaining_balance: rem,
         monthly_amount: monthly,
         status: ob.status === 'completed' || (!ob.is_active && isInst && rem <= 0) ? 'completed' : getObligationStatus(ob.due_day, Boolean(ob.is_paid))
       };

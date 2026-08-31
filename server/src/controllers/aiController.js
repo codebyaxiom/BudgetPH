@@ -279,9 +279,10 @@ Tool Guidelines:
 3. 'log_expense': Call when user logs an actual spent expense (e.g. "Lunch ₱250", "Pamasahe ₱50").
 4. 'add_obligation_or_debt': Call when user mentions a new bill, debt, utang, or loan.
    - If user mentions an end date or installment terms (e.g. "2000 per month until December", "hulugan for 6 months"), set 'is_installment: true', 'end_month', and 'end_year'.
-   - If user mentions a lump sum debt without a payment schedule (e.g. "May utang ako kay Tito Jun ₱10,000"), save it immediately as a debt and proactively ask if they want to split it into monthly installments (e.g. "Gusto mo ba itong i-set up bilang ₱2,000/buwan?").
-5. 'mark_bill_paid': Call when user mentions paying a bill or advancing debt payments (e.g. "Nabayaran ko na kuryente", "Nag-advance ako ng 2 months kay Aunt Maria ₱4,000").
-6. 'deposit_to_savings': Call when user puts money into emergency fund or savings.
+   - If user mentions a lump sum or one-time debt (e.g. "utang ₱5,000 is one-time pay", "May utang ako kay Tito Jun ₱10,000"), set 'is_installment: false'.
+5. 'update_obligation': Call when user clarifies, edits, or adjusts an existing bill or debt's terms (e.g. "my utang 5000 is just a one time pay", "gawing one-time pay ang utang", "i-update ang amount ng meralco", "gawing variable").
+6. 'mark_bill_paid': ONLY call when user explicitly reports having MADE/SENT a payment (e.g. "Nabayaran ko na ₱5,000", "Paid my bill", "Nag-advance ako ng 2 months kay Aunt Maria ₱4,000"). NEVER call 'mark_bill_paid' when user is merely explaining or clarifying the type/terms of a debt!
+7. 'deposit_to_savings': Call when user puts money into emergency fund or savings.
 7. 'add_family_allowance': Call when adding a child or family dependent's regular allowance/baon to the budget (use real names or "Bunso"/"Panganay").
 8. 'update_family_member_name': Call when renaming or updating a family member's name (e.g. "Gawing Lucas si Grade 2 Kid").
 9. 'delete_family_member': Call when user asks to remove, delete, or eliminate a family member or their allowance (e.g. "Alisin si Lucas", "Delete Farzam").

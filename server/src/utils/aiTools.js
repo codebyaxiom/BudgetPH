@@ -560,12 +560,11 @@ export async function executeAiTool(name, args, userId = 1) {
         const currentMonth = new Date().getMonth() + 1;
         const currentYear = new Date().getFullYear();
 
-        const isLoanOrUtang = category === 'loan' || (name && name.toLowerCase().includes('utang'));
-        let isInstallment = (args.is_installment || isLoanOrUtang) ? 1 : 0;
-        let endMonth = args.end_month ? parseInt(args.end_month, 10) : (isInstallment ? 12 : null);
-        let endYear = args.end_year ? parseInt(args.end_year, 10) : currentYear;
-        let totalAmount = args.total_amount ? parseFloat(args.total_amount) : null;
-        let remainingBalance = null;
+        let isInstallment = (args.is_installment === true || args.is_installment === 'true' || args.is_installment === 1 || Boolean(args.end_month)) ? 1 : 0;
+        let endMonth = args.end_month ? parseInt(args.end_month, 10) : null;
+        let endYear = args.end_year ? parseInt(args.end_year, 10) : (endMonth ? currentYear : null);
+        let totalAmount = args.total_amount ? parseFloat(args.total_amount) : amount;
+        let remainingBalance = totalAmount;
 
         if (endMonth) {
           isInstallment = 1;
@@ -573,11 +572,11 @@ export async function executeAiTool(name, args, userId = 1) {
             endYear = currentYear + 1;
           }
           const totalMonths = Math.max(1, (endYear - currentYear) * 12 + (endMonth - currentMonth) + 1);
-          if (!totalAmount) {
+          if (!args.total_amount) {
             totalAmount = totalMonths * amount;
           }
           remainingBalance = totalAmount;
-        } else if (totalAmount) {
+        } else if (args.total_amount && args.total_amount > amount) {
           isInstallment = 1;
           remainingBalance = totalAmount;
           const months = Math.ceil(totalAmount / amount);
