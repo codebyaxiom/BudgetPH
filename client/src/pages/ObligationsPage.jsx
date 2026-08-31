@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Receipt, Plus, CheckCircle2, RotateCcw, Trash2, Calendar, Tag, AlertCircle } from 'lucide-react';
+import { Receipt, Plus, CheckCircle2, RotateCcw, Trash2, Calendar, Tag, AlertTriangle, Clock, AlertCircle } from 'lucide-react';
 import * as api from '../services/api';
 import { useBudgetStore } from '../stores/useBudgetStore';
 import { useLanguageStore } from '../stores/useLanguageStore';
+import { getBillDueStatus } from '../utils/billStatus';
 
 const CATEGORY_NAMES = {
   electricity: { en: 'Electricity / Power', tl: 'Kuryente / Power' },
@@ -81,7 +82,15 @@ export function ObligationsPage() {
     await loadDashboard();
   };
 
+  // Compute Overdue & Due Soon statistics
+  const overdueBills = obligations.filter(o => !o.is_paid && getBillDueStatus(o.due_day, o.is_paid, language).isOverdue);
+  const dueTodayBills = obligations.filter(o => !o.is_paid && getBillDueStatus(o.due_day, o.is_paid, language).isDueToday);
+  const totalOverdueAmount = overdueBills.reduce((sum, o) => sum + parseFloat(o.amount || 0), 0);
+
   const filtered = obligations.filter(o => {
+    const dueInfo = getBillDueStatus(o.due_day, o.is_paid, language);
+    if (filter === 'overdue') return dueInfo.isOverdue;
+    if (filter === 'due_soon') return dueInfo.isDueSoon;
     if (filter === 'paid') return o.is_paid;
     if (filter === 'pending') return !o.is_paid;
     if (filter === 'variable') return o.is_variable;
@@ -89,7 +98,9 @@ export function ObligationsPage() {
   });
 
   const filterTabs = [
-    { id: 'all', labelEn: 'All Bills', labelTl: 'Lahat ng Bills' },
+    { id: 'all', labelEn: 'All Bills', labelTl: 'Lahat ng Bills', count: obligations.length },
+    { id: 'overdue', labelEn: `🚨 Overdue (${overdueBills.length})`, labelTl: `🚨 Lipas na (${overdueBills.length})`, count: overdueBills.length, isUrgent: overdueBills.length > 0 },
+    { id: 'due_soon', labelEn: '⏳ Due Soon / Today', labelTl: '⏳ Nearing Due', count: dueTodayBills.length },
     { id: 'pending', labelEn: 'Pending Bills', labelTl: 'Hindi Pa Bayad' },
     { id: 'paid', labelEn: 'Paid Bills', labelTl: 'Bayad Na' },
     { id: 'variable', labelEn: 'Variable Bills', labelTl: 'Pabago-bago' }
@@ -108,7 +119,7 @@ export function ObligationsPage() {
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
             {isTL 
               ? 'Pamahalaan ang mga fixed at variable na bayarin (Meralco, Maynilad, Upa, Internet, Utang).'
-              : 'Track and manage fixed and variable monthly commitments (Utilities, Rent, Loans, Cards).'}
+              : 'Track and manage fixed and variable monthly commitments with automatic overdue reminders.'}
           </p>
         </div>
 
@@ -121,21 +132,58 @@ export function ObligationsPage() {
         </button>
       </div>
 
+      {/* 🚨 Overdue Emergency Reminder Banner */}
+      {overdueBills.length > 0 && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-rose-500/10 dark:bg-rose-950/40 border-2 border-rose-500/40 text-rose-900 dark:text-rose-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-in zoom-in-98 duration-200">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-rose-500 text-white flex items-center justify-center flex-shrink-0 shadow-md">
+              <AlertTriangle className="w-5 h-5 animate-bounce" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-sm sm:text-base font-['Plus_Jakarta_Sans'] text-rose-700 dark:text-rose-300">
+                {isTL 
+                  ? `🚨 Paalala: May ${overdueBills.length} kang bayarin na lampas na sa due date!` 
+                  : `🚨 Attention: You have ${overdueBills.length} overdue bill(s) past due date!`}
+              </h3>
+              <p className="text-xs text-rose-600 dark:text-rose-400 mt-0.5">
+                {isTL
+                  ? `Kabuuang kailangang bayaran: ₱${totalOverdueAmount.toLocaleString()}. Bayaran agad para maiwasan ang putol o interest penalties.`
+                  : `Total overdue amount: ₱${totalOverdueAmount.toLocaleString()}. Settle immediately to avoid disconnection fees or penalties.`}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setFilter('overdue')}
+            className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-xs transition whitespace-nowrap cursor-pointer self-start sm:self-center"
+          >
+            {isTL ? 'Tingnan ang Overdue' : 'View Overdue Bills'}
+          </button>
+        </div>
+      )}
+
       {/* Filter Tabs */}
       <div className="flex gap-2 overflow-x-auto select-none no-scrollbar">
-        {filterTabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setFilter(tab.id)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
-              filter === tab.id 
-                ? 'bg-emerald-600 text-white shadow-sm' 
-                : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-            }`}
-          >
-            {isTL ? tab.labelTl : tab.labelEn}
-          </button>
-        ))}
+        {filterTabs.map(tab => {
+          const isSelected = filter === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setFilter(tab.id)}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+                isSelected
+                  ? tab.id === 'overdue'
+                    ? 'bg-rose-600 text-white shadow-sm'
+                    : 'bg-emerald-600 text-white shadow-sm'
+                  : tab.isUrgent
+                  ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800/80 hover:bg-rose-100'
+                  : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+              }`}
+            >
+              <span>{isTL ? tab.labelTl : tab.labelEn}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Obligations Grid */}
@@ -143,11 +191,11 @@ export function ObligationsPage() {
         <div className="bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-3xl p-12 text-center">
           <span className="text-4xl">📋</span>
           <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mt-3 font-['Plus_Jakarta_Sans']">
-            {isTL ? 'Walang nahanap na bayarin' : 'No bills found in this filter'}
+            {isTL ? 'Walang nahanap na bayarin sa filter na ito' : 'No bills found in this filter'}
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto mt-1">
             {isTL 
-              ? 'Lahat ng bayarin sa filter na ito ay na-settle na o wala pang naitala.'
+              ? 'Lahat ng bayarin sa kategoryang ito ay na-settle na o wala pang naitala.'
               : 'All obligations in this category are settled or none have been added.'}
           </p>
         </div>
@@ -155,11 +203,16 @@ export function ObligationsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filtered.map(ob => {
             const catLabel = CATEGORY_NAMES[ob.category]?.[language] || ob.category;
+            const dueInfo = getBillDueStatus(ob.due_day, ob.is_paid, language);
 
             return (
               <div 
                 key={ob.id} 
-                className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-5 shadow-xs flex flex-col justify-between hover:border-emerald-300 dark:hover:border-emerald-800/80 transition"
+                className={`bg-white dark:bg-slate-900 rounded-2xl border p-5 shadow-xs flex flex-col justify-between transition ${
+                  dueInfo.isOverdue
+                    ? 'border-rose-400/80 dark:border-rose-800/80 bg-rose-50/20 dark:bg-rose-950/20 ring-1 ring-rose-400/40'
+                    : 'border-slate-200/90 dark:border-slate-800 hover:border-emerald-300 dark:hover:border-emerald-800/80'
+                }`}
               >
                 <div>
                   <div className="flex justify-between items-start mb-3 gap-2">
@@ -172,21 +225,18 @@ export function ObligationsPage() {
                       </span>
                     </div>
 
-                    {ob.is_paid ? (
-                      <span className="px-2.5 py-1 bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 rounded-full text-xs font-bold border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>{isTL ? 'Bayad Na' : 'Paid'}</span>
-                      </span>
-                    ) : (
-                      <span className="px-2.5 py-1 bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 rounded-full text-xs font-bold border border-amber-200 dark:border-amber-800">
-                        {isTL ? `Ika-${ob.due_day}` : `Due Day ${ob.due_day}`}
-                      </span>
-                    )}
+                    {/* Status Badge */}
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold border flex items-center gap-1 ${dueInfo.badgeClass}`}>
+                      {ob.is_paid ? <CheckCircle2 className="w-3.5 h-3.5" /> : null}
+                      <span>{dueInfo.shortLabel}</span>
+                    </span>
                   </div>
 
                   <div className="my-3">
                     <div className="flex items-baseline gap-2">
-                      <span className="text-2xl font-black font-['Plus_Jakarta_Sans'] text-slate-900 dark:text-slate-50 tracking-tight">
+                      <span className={`text-2xl font-black font-['Plus_Jakarta_Sans'] tracking-tight ${
+                        dueInfo.isOverdue ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-slate-50'
+                      }`}>
                         ₱{Number(ob.amount).toLocaleString()}
                       </span>
                       {Boolean(ob.is_variable) && (
@@ -196,8 +246,12 @@ export function ObligationsPage() {
                       )}
                     </div>
                     
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                      {isTL ? `Due tuwing ika-${ob.due_day} ng buwan` : `Due every ${ob.due_day}th of the month`}
+                    <p className={`text-xs mt-1 font-medium ${
+                      dueInfo.isOverdue 
+                        ? 'text-rose-600 dark:text-rose-400 font-bold' 
+                        : 'text-slate-500 dark:text-slate-400'
+                    }`}>
+                      {dueInfo.label}
                     </p>
                   </div>
                 </div>
@@ -215,7 +269,11 @@ export function ObligationsPage() {
                   ) : (
                     <button
                       onClick={() => handleMarkPaid(ob.id)}
-                      className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition cursor-pointer flex items-center justify-center gap-1.5"
+                      className={`flex-1 py-2 font-bold text-xs rounded-xl shadow-xs transition cursor-pointer flex items-center justify-center gap-1.5 text-white ${
+                        dueInfo.isOverdue
+                          ? 'bg-rose-600 hover:bg-rose-700 active:scale-98'
+                          : 'bg-emerald-600 hover:bg-emerald-700 active:scale-98'
+                      }`}
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <span>{isTL ? 'I-marka na Bayad' : 'Mark as Paid'}</span>
@@ -280,7 +338,7 @@ export function ObligationsPage() {
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1.5">
-                    {isTL ? 'Araw ng Due' : 'Due Day'}
+                    {isTL ? 'Araw ng Due (1-31)' : 'Due Day (1-31)'}
                   </label>
                   <input
                     type="number"

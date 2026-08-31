@@ -68,6 +68,15 @@ export async function getUserFinancialSnapshot(userId = 1) {
   const [userRows] = await pool.query('SELECT name FROM users WHERE id = ?', [userId]);
   const [incomeRows] = await pool.query('SELECT frequency, payday_1, payday_2 FROM income_sources WHERE user_id = ? AND is_active = 1 LIMIT 1', [userId]);
 
+  const todayObj = new Date();
+  const currentDay = todayObj.getDate();
+
+  const overdueObs = unpaidBills.filter(o => o.due_day < currentDay);
+  const dueTodayObs = unpaidBills.filter(o => o.due_day === currentDay);
+  const dueSoonObs = unpaidBills.filter(o => o.due_day > currentDay && o.due_day <= currentDay + 3);
+
+  const totalOverdueAmount = overdueObs.reduce((sum, o) => sum + parseFloat(o.amount || 0), 0);
+
   return {
     user_name: userRows[0]?.name || 'Ka-Budget',
     pay_schedule: incomeRows[0]?.frequency || 'semi_monthly',
@@ -76,11 +85,15 @@ export async function getUserFinancialSnapshot(userId = 1) {
     remaining_today: metrics.remaining_today,
     days_until_payday: metrics.days_until_payday,
     spendable_remaining: metrics.spendable_remaining,
-    
+
     // Obligations Breakdown
     unpaid_bills_count: unpaidBills.length,
     total_unpaid_bills_amount: totalUnpaidAmount,
     unpaid_bills_list: unpaidBills.map(o => `${o.name} (₱${Number(o.amount).toLocaleString()} - due day ${o.due_day})`).join(', ') || 'None! All bills are paid 🎉',
+
+    overdue_bills_count: overdueObs.length,
+    total_overdue_amount: totalOverdueAmount,
+    overdue_bills_list: overdueObs.map(o => `${o.name} (₱${Number(o.amount).toLocaleString()} - OVERDUE by ${currentDay - o.due_day} days)`).join(', ') || 'None (No overdue bills) 👍',
     
     paid_bills_count: paidBills.length,
     total_paid_bills_amount: totalPaidAmount,
@@ -130,26 +143,45 @@ export async function getProactiveAlerts(req, res) {
     }
 
     const currentDay = new Date().getDate();
-    const [upcomingObs] = await pool.query(
+    const [allUnpaidObs] = await pool.query(
       `SELECT o.name, o.amount, o.due_day FROM obligations o
        WHERE o.user_id = ? AND o.is_active = 1 
          AND o.id NOT IN (
            SELECT obligation_id FROM obligation_payments 
            WHERE MONTH(paid_date) = MONTH(CURRENT_DATE()) AND YEAR(paid_date) = YEAR(CURRENT_DATE())
          )
-         AND o.due_day <= ?
-       LIMIT 2`,
-      [userId, currentDay + 3]
+       ORDER BY o.due_day ASC`,
+      [userId]
     );
 
-    for (const ob of upcomingObs) {
-      alerts.push({
-        type: 'warning',
-        title: isTL ? `⚠️ Due Bill: ${ob.name}` : `⚠️ Due Bill: ${ob.name}`,
-        message: isTL
-          ? `Ang ${ob.name} (₱${Number(ob.amount).toLocaleString()}) ay due sa ika-${ob.due_day} at hindi pa bayad.`
-          : `${ob.name} (₱${Number(ob.amount).toLocaleString()}) is due on the ${ob.due_day}th and is still unpaid.`
-      });
+    for (const ob of allUnpaidObs) {
+      if (ob.due_day < currentDay) {
+        const daysLate = currentDay - ob.due_day;
+        alerts.push({
+          type: 'danger',
+          title: isTL ? `🚨 OVERDUE: ${ob.name}` : `🚨 OVERDUE BILL: ${ob.name}`,
+          message: isTL
+            ? `Ang ${ob.name} (₱${Number(ob.amount).toLocaleString()}) ay ${daysLate} araw nang LAMPAS sa due date (ika-${ob.due_day}). Bayaran agad!`
+            : `${ob.name} (₱${Number(ob.amount).toLocaleString()}) is ${daysLate} days OVERDUE (was due on the ${ob.due_day}th)! Settle immediately.`
+        });
+      } else if (ob.due_day === currentDay) {
+        alerts.push({
+          type: 'warning',
+          title: isTL ? `⏰ DUE NGAYONG ARAW: ${ob.name}` : `⏰ DUE TODAY: ${ob.name}`,
+          message: isTL
+            ? `Ang ${ob.name} (₱${Number(ob.amount).toLocaleString()}) ay DUE NGAYON. Huwag kalimutang bayaran!`
+            : `${ob.name} (₱${Number(ob.amount).toLocaleString()}) is DUE TODAY. Remember to settle!`
+        });
+      } else if (ob.due_day <= currentDay + 3) {
+        const daysLeft = ob.due_day - currentDay;
+        alerts.push({
+          type: 'info',
+          title: isTL ? `⏳ Due sa ${daysLeft} araw: ${ob.name}` : `⏳ Due in ${daysLeft} days: ${ob.name}`,
+          message: isTL
+            ? `Ang ${ob.name} (₱${Number(ob.amount).toLocaleString()}) ay due sa ika-${ob.due_day}.`
+            : `${ob.name} (₱${Number(ob.amount).toLocaleString()}) is due on the ${ob.due_day}th.`
+        });
+      }
     }
 
     res.json({ success: true, alerts });

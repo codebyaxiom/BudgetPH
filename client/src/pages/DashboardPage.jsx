@@ -3,6 +3,7 @@ import { useBudgetStore } from '../stores/useBudgetStore';
 import { useLanguageStore } from '../stores/useLanguageStore';
 import { Wallet, Calendar, AlertTriangle, CheckCircle2, TrendingUp, ArrowRight, DollarSign, Clock, Sparkles, Receipt } from 'lucide-react';
 import * as api from '../services/api';
+import { getBillDueStatus } from '../utils/billStatus';
 
 export function DashboardPage({ setActiveTab }) {
   const { dashboardData, proactiveAlerts, isLoadingDashboard, loadDashboard, openExpenseModal } = useBudgetStore();
@@ -194,28 +195,48 @@ export function DashboardPage({ setActiveTab }) {
 
           <div className="space-y-3">
             {d.upcoming_bills?.length ? (
-              d.upcoming_bills.map((b) => (
-                <div key={b.id} className="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition">
-                  <div>
-                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{b.name}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {t('due_every_day', { day: b.due_day, amount: Number(b.amount).toLocaleString() })}
-                    </p>
+              d.upcoming_bills.map((b) => {
+                const dueInfo = getBillDueStatus(b.due_day, b.is_paid, language);
+                return (
+                  <div 
+                    key={b.id} 
+                    className={`flex items-center justify-between p-3.5 rounded-xl border transition ${
+                      dueInfo.isOverdue
+                        ? 'border-rose-300 dark:border-rose-800 bg-rose-50/40 dark:bg-rose-950/30'
+                        : 'border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-slate-50 dark:hover:bg-slate-800/80'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{b.name}</p>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${dueInfo.badgeClass}`}>
+                          {dueInfo.shortLabel}
+                        </span>
+                      </div>
+                      <p className={`text-xs mt-0.5 ${
+                        dueInfo.isOverdue ? 'text-rose-600 dark:text-rose-400 font-semibold' : 'text-slate-500 dark:text-slate-400'
+                      }`}>
+                        ₱{Number(b.amount).toLocaleString()} · {dueInfo.label}
+                      </p>
+                    </div>
+
+                    {b.is_paid ? (
+                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 flex items-center gap-1 border border-emerald-200 dark:border-emerald-800">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> {t('paid_badge')}
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handleMarkPaid(b.id)}
+                        className={`px-3 py-1.5 rounded-lg text-white text-xs font-bold shadow-xs transition cursor-pointer ${
+                          dueInfo.isOverdue ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'
+                        }`}
+                      >
+                        {t('mark_paid')}
+                      </button>
+                    )}
                   </div>
-                  {b.is_paid ? (
-                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 flex items-center gap-1 border border-blue-200 dark:border-blue-800">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> {t('paid_badge')}
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => handleMarkPaid(b.id)}
-                      className="px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-bold shadow-sm transition cursor-pointer"
-                    >
-                      {t('mark_paid')}
-                    </button>
-                  )}
-                </div>
-              ))
+                );
+              })
             ) : (
               <p className="text-xs text-slate-400 py-6 text-center">{t('no_upcoming_bills')}</p>
             )}
