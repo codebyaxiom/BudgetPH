@@ -240,8 +240,8 @@ export function AIChatPage({ setActiveTab }) {
 
   const handleOnboardingComplete = async ({ name, salary, dailyBudget, totalBills, nextPayday }) => {
     const celebrationMsg = isTL
-      ? `Mabuhay, **${name}**! 🎉 Tagumpay nating naitakda ang iyong personal budget blueprint:\n\n• **Sahod kada Cut-off:** ₱${Number(salary).toLocaleString()}\n• **Nakatagang Bills:** ₱${Number(totalBills).toLocaleString()}\n• **Awtomatikong Daily Budget:** ₱${Number(dailyBudget).toLocaleString()} / araw\n• **Susunod na Sahod:** ${nextPayday}\n\nHanda na ang iyong Dashboard, Daily Budget, at Payday Simulator! Paano kita matutulungan ngayon?\n\n<!-- CHOICES: ["Tingnan ang Dashboard 🚀", "I-simulate ang Payday 💰", "Magkano safe spendable ko today?"] -->`
-      : `Welcome, **${name}**! 🎉 Your personal financial blueprint is ready:\n\n• **Salary per Cut-off:** ₱${Number(salary).toLocaleString()}\n• **Allocated Bills:** ₱${Number(totalBills).toLocaleString()}\n• **Daily Safe Spending Limit:** ₱${Number(dailyBudget).toLocaleString()} / day\n• **Next Payday:** ${nextPayday}\n\nYour Dashboard, Daily Budget, and Payday Simulator are all set! How can I help you today?\n\n<!-- CHOICES: ["View Dashboard 🚀", "Simulate Payday 💰", "What is my daily spendable?"] -->`;
+      ? `Mabuhay, **${name}**! 🎉 Tagumpay nating nai-setup ang iyong budget blueprint:\n\n• **Sahod kada Cut-off:** ₱${Number(salary).toLocaleString()}\n• **Nakatagang Bills:** ₱${Number(totalBills).toLocaleString()}\n• **Awtomatikong Safe Spendable:** ₱${Number(dailyBudget).toLocaleString()} / araw\n• **Susunod na Sahod:** ${nextPayday}\n\nMay iba ka pa bang gustong idagdag tulad ng utang/loan, family baon, o iba pang gastusin bago tayo pumunta sa Dashboard?\n\n<!-- CHOICES: ["Magdagdag ng Utang / Loan 💳", "Magdagdag ng Family Baon 🎒", "Tingnan ang Dashboard 🚀", "I-simulate ang Payday 💰"] -->`
+      : `Welcome, **${name}**! 🎉 Your financial blueprint is ready:\n\n• **Salary per Cut-off:** ₱${Number(salary).toLocaleString()}\n• **Allocated Bills:** ₱${Number(totalBills).toLocaleString()}\n• **Daily Safe Spending Limit:** ₱${Number(dailyBudget).toLocaleString()} / day\n• **Next Payday:** ${nextPayday}\n\nWould you like to add anything else such as outstanding debts/loans or family allowances before heading to your Dashboard?\n\n<!-- CHOICES: ["Add Debt / Loan 💳", "Add Family Allowance 🎒", "View Dashboard 🚀", "Simulate Payday 💰"] -->`;
 
     setMessages(prev => [
       ...prev,
@@ -415,17 +415,6 @@ export function AIChatPage({ setActiveTab }) {
 
       {/* 3. Messages Stream */}
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 select-text">
-        
-        {/* Embedded Fast-Track Onboarding Card if profile is not completed */}
-        {shouldShowSetupCard && (
-          <ConversationalOnboardingCard 
-            onComplete={(data) => {
-              setForceShowSetupCard(false);
-              handleOnboardingComplete(data);
-            }} 
-            setActiveTab={setActiveTab} 
-          />
-        )}
 
         {messages.map((m, idx) => {
           const isUser = m.role === 'user';
@@ -541,6 +530,18 @@ export function AIChatPage({ setActiveTab }) {
                             }
                             if (choice.includes('Payday') || choice.includes('Sahod')) {
                               setActiveTab && setActiveTab('payday');
+                              return;
+                            }
+                            if (choice.includes('Utang') || choice.includes('Loan') || choice.includes('Debt')) {
+                              setActiveTab && setActiveTab('obligations');
+                              return;
+                            }
+                            if (choice.includes('Baon') || choice.includes('Allowance')) {
+                              setActiveTab && setActiveTab('allowances');
+                              return;
+                            }
+                            if (choice.includes('Savings') || choice.includes('Ipon')) {
+                              setActiveTab && setActiveTab('savings');
                               return;
                             }
                             handleSend(choice);
@@ -786,6 +787,19 @@ export function AIChatPage({ setActiveTab }) {
               </div>
             );
           })}
+
+          {/* Embedded Fast-Track Onboarding Card rendered below AI greeting */}
+          {shouldShowSetupCard && (
+            <div className="pt-2 animate-in fade-in duration-200">
+              <ConversationalOnboardingCard 
+                onComplete={(data) => {
+                  setForceShowSetupCard(false);
+                  handleOnboardingComplete(data);
+                }} 
+                setActiveTab={setActiveTab} 
+              />
+            </div>
+          )}
 
           {isThinking && (
             <div className="flex items-start gap-3.5">

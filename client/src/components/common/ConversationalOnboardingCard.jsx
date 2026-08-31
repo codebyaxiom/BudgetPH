@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
 import { 
   Sparkles, Calendar, DollarSign, Zap, Home, Wifi, Droplets, CreditCard, 
-  Smartphone, Check, ArrowRight, ShieldCheck, Plus, CheckCircle2, User, Clock
+  Smartphone, Check, ArrowRight, ArrowLeft, ShieldCheck, Plus, CheckCircle2, User, Clock, Trash2
 } from 'lucide-react';
 import * as api from '../../services/api';
 import { useBudgetStore } from '../../stores/useBudgetStore';
 import { useLanguageStore } from '../../stores/useLanguageStore';
 
 const DEFAULT_BILLS = [
-  { id: 'electricity', labelEn: 'Electricity (Meralco)', labelTl: 'Kuryente (Meralco)', category: 'electricity', amount: 2000, due_day: 18, selected: true, icon: Zap },
-  { id: 'water', labelEn: 'Water (Maynilad / Manila Water)', labelTl: 'Tubig (Maynilad)', category: 'water', amount: 500, due_day: 22, selected: true, icon: Droplets },
-  { id: 'internet', labelEn: 'Internet / Wifi (PLDT / Converge)', labelTl: 'Internet / Wifi', category: 'internet', amount: 1500, due_day: 25, selected: true, icon: Wifi },
-  { id: 'rent', labelEn: 'House Rent / Upa', labelTl: 'Upa sa Bahay (Rent)', category: 'rent', amount: 5000, due_day: 1, selected: true, icon: Home },
-  { id: 'loan', labelEn: 'Loans & Cards / Utang', labelTl: 'Loans / Credit Card / Utang', category: 'credit_card', amount: 2000, due_day: 5, selected: false, icon: CreditCard },
-  { id: 'phone', labelEn: 'Mobile Load & Promo', labelTl: 'Phone & Load', category: 'phone', amount: 500, due_day: 15, selected: false, icon: Smartphone }
+  { id: 'electricity', labelEn: 'Electricity (Meralco)', labelTl: 'Kuryente (Meralco)', category: 'electricity', amount: 2000, due_day: 18, selected: true, icon: '⚡' },
+  { id: 'water', labelEn: 'Water (Maynilad)', labelTl: 'Tubig (Maynilad)', category: 'water', amount: 500, due_day: 22, selected: true, icon: '💧' },
+  { id: 'internet', labelEn: 'Internet / Wifi', labelTl: 'Internet / Wifi', category: 'internet', amount: 1500, due_day: 25, selected: true, icon: '🌐' },
+  { id: 'rent', labelEn: 'House Rent / Upa', labelTl: 'Upa sa Bahay (Rent)', category: 'rent', amount: 5000, due_day: 1, selected: true, icon: '🏠' },
+  { id: 'loan', labelEn: 'Loans / Cards / Utang', labelTl: 'Loans / Cards / Utang', category: 'credit_card', amount: 2000, due_day: 5, selected: false, icon: '💳' },
+  { id: 'phone', labelEn: 'Mobile Load', labelTl: 'Load / Phone', category: 'phone', amount: 500, due_day: 15, selected: false, icon: '📱' }
 ];
 
 const PRESET_SALARIES = [10000, 15000, 20000, 25000, 30000, 40000];
@@ -23,29 +23,37 @@ export function ConversationalOnboardingCard({ onComplete, setActiveTab }) {
   const { language, t } = useLanguageStore();
   const isTL = language === 'tl';
 
+  const [step, setStep] = useState(1); // 1: Name, 2: Salary, 3: Schedule, 4: Bills
   const [name, setName] = useState('');
   const [salaryAmount, setSalaryAmount] = useState(20000);
   const [customSalary, setCustomSalary] = useState('');
-  const [frequency, setFrequency] = useState('semi-monthly'); // 'semi-monthly', 'monthly', 'weekly'
+  const [frequency, setFrequency] = useState('semi-monthly'); // 'semi-monthly', 'monthly', 'weekly', 'custom'
+  const [customPaydayDate, setCustomPaydayDate] = useState('');
   const [bills, setBills] = useState(DEFAULT_BILLS);
-  const [includeEmergencyFund, setIncludeEmergencyFund] = useState(true);
-  const [emergencyAmount, setEmergencyAmount] = useState(1000);
+  const [newBillName, setNewBillName] = useState('');
+  const [newBillAmount, setNewBillAmount] = useState('');
+  const [isAddingBill, setIsAddingBill] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Compute Next Payday Date based on schedule
-  const today = new Date();
-  const getComputedNextPayday = (freq) => {
+  const activeSalary = customSalary ? parseFloat(customSalary) || 0 : salaryAmount;
+  const selectedBills = bills.filter(b => b.selected);
+  const totalBills = selectedBills.reduce((sum, b) => sum + (parseFloat(b.amount) || 0), 0);
+
+  // Compute Next Payday Date
+  const getComputedNextPayday = () => {
+    if (frequency === 'custom' && customPaydayDate) {
+      return customPaydayDate;
+    }
     const d = new Date();
-    if (freq === 'semi-monthly') {
+    if (frequency === 'semi-monthly') {
       if (d.getDate() < 15) {
         d.setDate(15);
       } else {
-        d.setMonth(d.getMonth() + 1, 0); // last day of month
+        d.setMonth(d.getMonth() + 1, 0);
       }
-    } else if (freq === 'monthly') {
+    } else if (frequency === 'monthly') {
       d.setMonth(d.getMonth() + 1, 0);
     } else {
-      // next Friday
       const day = d.getDay();
       const diff = d.getDate() + (5 - day + 7) % 7;
       d.setDate(diff);
@@ -53,14 +61,8 @@ export function ConversationalOnboardingCard({ onComplete, setActiveTab }) {
     return d.toISOString().split('T')[0];
   };
 
-  const activeSalary = customSalary ? parseFloat(customSalary) || 0 : salaryAmount;
-  const selectedBills = bills.filter(b => b.selected);
-  const totalBills = selectedBills.reduce((sum, b) => sum + (parseFloat(b.amount) || 0), 0);
-  const savingsDeduction = includeEmergencyFund ? (parseFloat(emergencyAmount) || 0) : 0;
-
-  // Estimated daily spendable based on typical 15-day semi-monthly cycle
   const cycleDays = frequency === 'weekly' ? 7 : frequency === 'monthly' ? 30 : 15;
-  const estimatedSpendable = Math.max(0, activeSalary - (totalBills / (frequency === 'monthly' ? 1 : 2)) - savingsDeduction);
+  const estimatedSpendable = Math.max(0, activeSalary - (totalBills / (frequency === 'monthly' ? 1 : 2)));
   const estimatedDaily = Math.round(estimatedSpendable / cycleDays);
 
   const toggleBill = (id) => {
@@ -71,27 +73,51 @@ export function ConversationalOnboardingCard({ onComplete, setActiveTab }) {
     setBills(prev => prev.map(b => b.id === id ? { ...b, amount: parseFloat(val) || 0 } : b));
   };
 
+  const handleAddCustomBill = (e) => {
+    e.preventDefault();
+    if (!newBillName.trim() || !newBillAmount) return;
+    const newBill = {
+      id: `custom_${Date.now()}`,
+      labelEn: newBillName.trim(),
+      labelTl: newBillName.trim(),
+      category: 'other',
+      amount: parseFloat(newBillAmount) || 0,
+      due_day: 15,
+      selected: true,
+      icon: '📝',
+      isCustom: true
+    };
+    setBills(prev => [...prev, newBill]);
+    setNewBillName('');
+    setNewBillAmount('');
+    setIsAddingBill(false);
+  };
+
+  const removeCustomBill = (id) => {
+    setBills(prev => prev.filter(b => b.id !== id));
+  };
+
   const handleSubmit = async (e) => {
     e?.preventDefault();
     if (!name.trim()) return;
 
     setIsSubmitting(true);
     try {
-      const nextPayday = getComputedNextPayday(frequency);
+      const nextPayday = getComputedNextPayday();
 
       const payload = {
         name: name.trim(),
         incomeAmount: activeSalary,
-        frequency,
+        frequency: frequency === 'custom' ? 'semi-monthly' : frequency,
         nextPaydayDate: nextPayday,
         bills: selectedBills.map(b => ({
           name: isTL ? b.labelTl : b.labelEn,
           amount: b.amount,
-          due_day: b.due_day,
+          due_day: b.due_day || 15,
           category: b.category
         })),
-        includeEmergencyFund,
-        emergencyAmount: parseFloat(emergencyAmount) || 1000
+        includeEmergencyFund: true,
+        emergencyAmount: 1000
       };
 
       const res = await api.completeFastTrackOnboarding(payload);
@@ -115,52 +141,82 @@ export function ConversationalOnboardingCard({ onComplete, setActiveTab }) {
   };
 
   return (
-    <div className="my-4 p-5 sm:p-7 rounded-3xl bg-white dark:bg-slate-900 border-2 border-emerald-500/40 shadow-2xl max-w-2xl w-full mx-auto animate-in zoom-in-95 duration-200 text-slate-900 dark:text-slate-100">
+    <div className="my-3 p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-emerald-500/40 shadow-xl max-w-xl w-full mx-auto animate-in zoom-in-95 duration-200 text-slate-900 dark:text-slate-100">
       
-      {/* Card Header */}
-      <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-4 mb-5">
-        <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center font-bold text-xl shadow-md flex-shrink-0">
-          📋
+      {/* Step Progress Header */}
+      <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-3.5">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black text-sm shadow-sm flex-shrink-0">
+            {step === 1 ? '👤' : step === 2 ? '💰' : step === 3 ? '🗓️' : '⚡'}
+          </div>
+          <div>
+            <h4 className="text-xs sm:text-sm font-black text-slate-900 dark:text-slate-50 font-['Plus_Jakarta_Sans']">
+              {step === 1 && (isTL ? '1. Pangalan (Name)' : '1. Your Name')}
+              {step === 2 && (isTL ? '2. Sahod kada Cut-off' : '2. Income per Cut-off')}
+              {step === 3 && (isTL ? '3. Schedule ng Sahod' : '3. Payday Schedule')}
+              {step === 4 && (isTL ? '4. Monthly Bills & Bayarin' : '4. Monthly Bills & Obligations')}
+            </h4>
+            <p className="text-[10px] text-slate-400">
+              {isTL ? `Hakbang ${step} ng 4` : `Step ${step} of 4`}
+            </p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-50 font-['Plus_Jakarta_Sans']">
-            {isTL ? 'Mabilisang Setup ng Badyet' : 'Fast-Track Budget Setup'}
-          </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            {isTL 
-              ? 'Punan ang mga sumusunod para makalkula agad ng AI ang iyong safe daily budget at payday schedule.' 
-              : 'Complete your initial profile so the AI can compute your daily budget limit and payday allocations.'}
-          </p>
+
+        {/* Step Indicator dots */}
+        <div className="flex items-center gap-1.5">
+          {[1, 2, 3, 4].map(s => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => s < step && setStep(s)}
+              className={`w-2 h-2 rounded-full transition-all ${
+                s === step 
+                  ? 'w-6 bg-emerald-600' 
+                  : s < step 
+                    ? 'bg-emerald-400 cursor-pointer' 
+                    : 'bg-slate-200 dark:bg-slate-700'
+              }`}
+            />
+          ))}
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
-        
-        {/* 1. Name Input */}
-        <div>
-          <label className="block text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5 flex items-center gap-1.5">
-            <User className="w-3.5 h-3.5 text-emerald-600" />
-            <span>{isTL ? '1. Ano ang iyong pangalan o palayaw?' : '1. What is your name or nickname?'}</span>
-          </label>
+      {/* STEP 1: Name */}
+      {step === 1 && (
+        <div className="space-y-3 animate-in fade-in duration-150">
+          <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">
+            {isTL ? 'Ano ang iyong pangalan o palayaw?' : 'What is your name or preferred nickname?'}
+          </p>
           <input
             type="text"
-            required
+            autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder={isTL ? 'Halimbawa: Jerald, Maria, Mark' : 'e.g. Jerald, Maria, Mark'}
-            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/60 text-slate-900 dark:text-slate-100 text-sm font-bold focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-slate-800 transition"
+            onKeyDown={(e) => e.key === 'Enter' && name.trim() && setStep(2)}
+            placeholder={isTL ? 'I-type ang iyong pangalan (e.g. Jerald)' : 'e.g. Jerald, Maria'}
+            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-bold focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-slate-800"
           />
+          <button
+            type="button"
+            disabled={!name.trim()}
+            onClick={() => setStep(2)}
+            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white font-black text-xs rounded-xl shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <span>{isTL ? 'Sunod: Ilagay ang Sahod' : 'Next: Salary Amount'}</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
         </div>
+      )}
 
-        {/* 2. Salary per Cut-off */}
-        <div>
-          <label className="block text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5 flex items-center gap-1.5">
-            <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
-            <span>{isTL ? '2. Magkano ang karaniwang sahod mo kada cut-off?' : '2. How much is your salary per cut-off?'}</span>
-          </label>
-
-          <div className="flex flex-wrap gap-2 mb-2">
-            {PRESET_SALARIES.map((amt) => {
+      {/* STEP 2: Salary Amount */}
+      {step === 2 && (
+        <div className="space-y-3 animate-in fade-in duration-150">
+          <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">
+            {isTL ? `Magkano ang karaniwang sahod mo kada cut-off, ${name}?` : `How much is your typical salary per cut-off, ${name}?`}
+          </p>
+          
+          <div className="grid grid-cols-3 gap-1.5">
+            {PRESET_SALARIES.map(amt => {
               const isSelected = !customSalary && salaryAmount === amt;
               return (
                 <button
@@ -170,7 +226,7 @@ export function ConversationalOnboardingCard({ onComplete, setActiveTab }) {
                     setCustomSalary('');
                     setSalaryAmount(amt);
                   }}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  className={`py-2 px-1 rounded-xl text-xs font-bold transition text-center cursor-pointer ${
                     isSelected
                       ? 'bg-emerald-600 text-white shadow-xs'
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
@@ -183,135 +239,236 @@ export function ConversationalOnboardingCard({ onComplete, setActiveTab }) {
           </div>
 
           <div className="relative">
-            <span className="absolute left-3.5 top-2.5 text-slate-400 font-bold text-sm">₱</span>
+            <span className="absolute left-3 top-2 text-slate-400 font-bold text-xs">₱</span>
             <input
               type="number"
-              step="0.01"
-              value={customSalary || (salaryAmount ? String(salaryAmount) : '')}
-              onChange={(e) => {
-                setCustomSalary(e.target.value);
-                setSalaryAmount(parseFloat(e.target.value) || 0);
-              }}
-              placeholder={isTL ? 'I-type ang eksaktong halaga kung iba' : 'Or type custom salary amount'}
-              className="w-full pl-8 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/60 text-slate-900 dark:text-slate-100 text-sm font-black focus:ring-2 focus:ring-emerald-500"
+              value={customSalary}
+              onChange={(e) => setCustomSalary(e.target.value)}
+              placeholder={isTL ? 'O i-type ang eksaktong halaga' : 'Or type exact custom amount'}
+              className="w-full pl-7 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-bold focus:ring-2 focus:ring-emerald-500"
             />
           </div>
+
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              className="py-2.5 px-3 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              disabled={activeSalary <= 0}
+              onClick={() => setStep(3)}
+              className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white font-black text-xs rounded-xl shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <span>{isTL ? 'Sunod: Payday Schedule' : 'Next: Payday Schedule'}</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
+      )}
 
-        {/* 3. Pay Schedule */}
-        <div>
-          <label className="block text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5 flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5 text-emerald-600" />
-            <span>{isTL ? '3. Kailan ka sumasahod?' : '3. What is your payday schedule?'}</span>
-          </label>
+      {/* STEP 3: Payday Schedule with Custom Option */}
+      {step === 3 && (
+        <div className="space-y-3 animate-in fade-in duration-150">
+          <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">
+            {isTL ? 'Kailan ka sumasahod?' : 'When do you receive your salary?'}
+          </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-1.5">
             {[
               { id: 'semi-monthly', labelEn: '15th & 30th (Kinsenas)', labelTl: '15th & 30th (Kinsenas)' },
-              { id: 'monthly', labelEn: 'Monthly (Katapusan)', labelTl: 'Kada Buwan (Katapusan)' },
-              { id: 'weekly', labelEn: 'Weekly (Lingguhan)', labelTl: 'Lingguhan (Weekly)' }
+              { id: 'monthly', labelEn: 'Monthly (Katapusan)', labelTl: 'Katapusan (Monthly)' },
+              { id: 'weekly', labelEn: 'Weekly (Lingguhan)', labelTl: 'Lingguhan (Weekly)' },
+              { id: 'custom', labelEn: 'Specific Date (Custom)', labelTl: 'Tukoy na Petsa (Custom)' }
             ].map(item => (
               <button
                 key={item.id}
                 type="button"
                 onClick={() => setFrequency(item.id)}
-                className={`p-3 rounded-2xl border text-left transition cursor-pointer ${
+                className={`p-2.5 rounded-xl border text-left text-xs transition cursor-pointer ${
                   frequency === item.id
                     ? 'border-emerald-500 bg-emerald-50/70 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 ring-1 ring-emerald-500 font-black'
-                    : 'border-slate-200 dark:border-slate-700 bg-slate-50/30 dark:bg-slate-800/30 text-slate-700 dark:text-slate-300 font-semibold'
+                    : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 text-slate-700 dark:text-slate-300 font-semibold'
                 }`}
               >
-                <p className="text-xs">{isTL ? item.labelTl : item.labelEn}</p>
+                {isTL ? item.labelTl : item.labelEn}
               </button>
             ))}
           </div>
-        </div>
 
-        {/* 4. Primary Monthly Bills Toggle */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="block text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-              <Zap className="w-3.5 h-3.5 text-emerald-600" />
-              <span>{isTL ? '4. Pangunahing Buwanang Bills (Piliin ang meron ka):' : '4. Primary Monthly Obligations:'}</span>
-            </label>
-            <span className="text-[11px] font-black text-slate-900 dark:text-slate-100 font-['Plus_Jakarta_Sans']">
+          {frequency === 'custom' && (
+            <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+              <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">
+                {isTL ? 'Piliin ang susunod na petsa ng sahod:' : 'Select exact next payday date:'}
+              </label>
+              <input
+                type="date"
+                value={customPaydayDate}
+                onChange={(e) => setCustomPaydayDate(e.target.value)}
+                className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold"
+              />
+            </div>
+          )}
+
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => setStep(2)}
+              className="py-2.5 px-3 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setStep(4)}
+              className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <span>{isTL ? 'Sunod: Monthly Bills' : 'Next: Monthly Bills'}</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* STEP 4: Monthly Bills & Custom Bills */}
+      {step === 4 && (
+        <form onSubmit={handleSubmit} className="space-y-3 animate-in fade-in duration-150">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">
+              {isTL ? 'Piliin o i-edit ang iyong mga regular na bills:' : 'Select or edit your recurring bills:'}
+            </p>
+            <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-400">
               Total: ₱{totalBills.toLocaleString()}
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {bills.map(b => {
-              const Icon = b.icon;
-              return (
-                <div
-                  key={b.id}
-                  onClick={() => toggleBill(b.id)}
-                  className={`p-3 rounded-2xl border transition flex items-center justify-between cursor-pointer ${
-                    b.selected
-                      ? 'border-emerald-500/80 bg-emerald-50/50 dark:bg-emerald-950/30 text-slate-900 dark:text-slate-50 shadow-2xs'
-                      : 'border-slate-200 dark:border-slate-800 bg-slate-50/20 dark:bg-slate-800/20 text-slate-400 opacity-60'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs flex-shrink-0 ${
-                      b.selected ? 'bg-emerald-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
-                    }`}>
-                      <Icon className="w-3.5 h-3.5" />
-                    </div>
-                    <span className="text-xs font-bold truncate">
-                      {isTL ? b.labelTl : b.labelEn}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <span className="text-xs font-bold text-slate-400">₱</span>
-                    <input
-                      type="number"
-                      value={b.amount}
-                      onChange={(e) => updateBillAmount(b.id, e.target.value)}
-                      className="w-16 px-1.5 py-0.5 text-xs font-black rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-right focus:ring-1 focus:ring-emerald-500"
-                    />
-                  </div>
+          {/* Compact Chips Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+            {bills.map(b => (
+              <div
+                key={b.id}
+                onClick={() => toggleBill(b.id)}
+                className={`p-2 rounded-xl border text-xs transition flex items-center justify-between cursor-pointer ${
+                  b.selected
+                    ? 'border-emerald-500/80 bg-emerald-50/50 dark:bg-emerald-950/30 text-slate-900 dark:text-slate-100 font-bold'
+                    : 'border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/30 text-slate-400 opacity-60'
+                }`}
+              >
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span>{b.icon}</span>
+                  <span className="truncate text-xs">{isTL ? b.labelTl : b.labelEn}</span>
                 </div>
-              );
-            })}
-          </div>
-        </div>
 
-        {/* 5. Live Blueprint Preview Box */}
-        <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-600/10 to-teal-600/10 border border-emerald-500/30 flex items-center justify-between">
-          <div>
-            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-              {isTL ? 'Kinalkulang Safe Daily Spendable' : 'Estimated Daily Budget Limit'}
-            </span>
-            <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-['Plus_Jakarta_Sans']">
-              ₱{estimatedDaily.toLocaleString()} <span className="text-xs font-normal text-slate-500">/ {isTL ? 'araw' : 'day'}</span>
-            </p>
+                <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                  <span className="text-[10px] text-slate-400">₱</span>
+                  <input
+                    type="number"
+                    value={b.amount}
+                    onChange={(e) => updateBillAmount(b.id, e.target.value)}
+                    className="w-14 px-1 py-0.5 text-xs font-bold rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-right focus:ring-1 focus:ring-emerald-500"
+                  />
+                  {b.isCustom && (
+                    <button
+                      type="button"
+                      onClick={() => removeCustomBill(b.id)}
+                      className="text-red-400 hover:text-red-600 p-0.5 cursor-pointer"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
 
-          <div className="text-right text-xs text-slate-500 dark:text-slate-400 space-y-0.5">
-            <p>{isTL ? 'Sahod:' : 'Income:'} <span className="font-bold text-slate-800 dark:text-slate-200">₱{activeSalary.toLocaleString()}</span></p>
-            <p>{isTL ? 'Bills per cut-off:' : 'Bills / cut-off:'} <span className="font-bold text-slate-800 dark:text-slate-200">₱{Math.round(totalBills / (frequency === 'monthly' ? 1 : 2)).toLocaleString()}</span></p>
-          </div>
-        </div>
-
-        {/* Submit Button */}
-        <button
-          type="submit"
-          disabled={isSubmitting || !name.trim() || activeSalary <= 0}
-          className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black text-sm rounded-2xl shadow-lg hover:shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
-        >
-          {isSubmitting ? (
-            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          {/* Add Custom Bill Toggle Form */}
+          {isAddingBill ? (
+            <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex flex-wrap gap-2 items-center text-xs">
+              <input
+                type="text"
+                value={newBillName}
+                onChange={(e) => setNewBillName(e.target.value)}
+                placeholder={isTL ? 'Pangalan ng Bill (e.g. Gym, Insurance)' : 'Bill Name (e.g. Gym, Insurance)'}
+                className="flex-1 min-w-[120px] px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-medium"
+              />
+              <input
+                type="number"
+                value={newBillAmount}
+                onChange={(e) => setNewBillAmount(e.target.value)}
+                placeholder="₱ Amount"
+                className="w-20 px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-bold"
+              />
+              <button
+                type="button"
+                onClick={handleAddCustomBill}
+                className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg font-bold cursor-pointer"
+              >
+                {isTL ? 'Idagdag' : 'Add'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsAddingBill(false)}
+                className="px-2 py-1.5 text-slate-400 font-medium cursor-pointer"
+              >
+                {isTL ? 'Kanselahin' : 'Cancel'}
+              </button>
+            </div>
           ) : (
-            <>
-              <Sparkles className="w-4 h-4" />
-              <span>{isTL ? 'I-kalkula ang Aking Budget at Simulan 🚀' : 'Calculate My Budget & Start 🚀'}</span>
-            </>
+            <button
+              type="button"
+              onClick={() => setIsAddingBill(true)}
+              className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer py-1"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>{isTL ? '+ Magdagdag ng Ibang Bill / Utang' : '+ Add Custom Bill / Debt'}</span>
+            </button>
           )}
-        </button>
 
-      </form>
+          {/* Live Daily Spending Result Pill */}
+          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400">
+                {isTL ? 'Safe Daily Budget:' : 'Safe Daily Budget:'}
+              </p>
+              <p className="text-base font-black text-emerald-600 dark:text-emerald-400 font-['Plus_Jakarta_Sans']">
+                ₱{estimatedDaily.toLocaleString()} <span className="text-[10px] font-normal text-slate-500">/ {isTL ? 'araw' : 'day'}</span>
+              </p>
+            </div>
+            <div className="text-right text-[11px] text-slate-500">
+              <p>{isTL ? 'Sahod:' : 'Income:'} <span className="font-bold">₱{activeSalary.toLocaleString()}</span></p>
+              <p>{isTL ? 'Total Bills:' : 'Total Bills:'} <span className="font-bold">₱{totalBills.toLocaleString()}</span></p>
+            </div>
+          </div>
+
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => setStep(3)}
+              className="py-2.5 px-3 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting || !name.trim()}
+              className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              {isSubmitting ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <>
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>{isTL ? 'I-kalkula ang Budget at Simulan 🚀' : 'Calculate My Budget & Start 🚀'}</span>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      )}
+
     </div>
   );
 }
