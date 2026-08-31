@@ -335,15 +335,19 @@ export function AIChatPage({ setActiveTab }) {
 
         {/* Right Quick Metrics & Actions */}
         <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-          {isProfileIncomplete && (
-            <button
-              onClick={() => setForceShowSetupCard(prev => !prev)}
-              className="px-2.5 py-1 sm:px-3 sm:py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] sm:text-xs font-black shadow-sm transition flex items-center gap-1 cursor-pointer whitespace-nowrap animate-pulse"
-            >
-              <Sparkles className="w-3 h-3" />
-              <span>{isTL ? 'Setup' : 'Setup'}</span>
-            </button>
-          )}
+          <button
+            onClick={() => setForceShowSetupCard(prev => !prev)}
+            className={`px-2.5 py-1 sm:px-3 sm:py-1 rounded-xl text-[11px] sm:text-xs font-black shadow-xs transition flex items-center gap-1 cursor-pointer whitespace-nowrap ${
+              isProfileIncomplete
+                ? 'bg-emerald-600 hover:bg-emerald-700 text-white animate-pulse'
+                : forceShowSetupCard
+                  ? 'bg-emerald-700 text-white'
+                  : 'bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100'
+            }`}
+          >
+            <Sparkles className="w-3 h-3" />
+            <span>{isProfileIncomplete ? (isTL ? 'I-setup ang Badyet' : 'Setup Budget') : (isTL ? '4-Step Setup' : '4-Step Setup')}</span>
+          </button>
 
           {/* Desktop-only quick metric pills */}
           {!isProfileIncomplete && (
