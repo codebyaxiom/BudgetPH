@@ -5,7 +5,7 @@ export async function getWishlist(req, res) {
   try {
     const userId = 1;
     const [items] = await pool.query(
-      `SELECT * FROM wishlist_items WHERE user_id = ? ORDER BY FIELD(priority, 'high', 'medium', 'low'), created_at DESC`,
+      `SELECT * FROM wishlist_items WHERE user_id = ? ORDER BY CASE priority WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END, created_at DESC`,
       [userId]
     );
 

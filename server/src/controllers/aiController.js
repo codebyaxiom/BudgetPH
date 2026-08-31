@@ -50,7 +50,7 @@ export async function getUserFinancialSnapshot(userId = 1) {
 
   // 4. Wants & Wishlist
   const [wishlistRows] = await pool.query(
-    "SELECT id, name, estimated_amount, priority FROM wishlist_items WHERE user_id = ? AND status = 'pending' ORDER BY FIELD(priority, 'high', 'medium', 'low')",
+    "SELECT id, name, estimated_amount, priority FROM wishlist_items WHERE user_id = ? AND status = 'pending' ORDER BY CASE priority WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END",
     [userId]
   );
   const totalWishlistCost = wishlistRows.reduce((acc, w) => acc + parseFloat(w.estimated_amount || 0), 0);

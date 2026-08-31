@@ -771,7 +771,7 @@ export async function executeAiTool(name, args, userId = 1) {
       case 'evaluate_wants_affordability': {
         const metrics = await getCycleBudgetMetrics(userId);
         const [items] = await pool.query(
-          `SELECT * FROM wishlist_items WHERE user_id = ? AND status = 'pending' ORDER BY FIELD(priority, 'high', 'medium', 'low'), estimated_amount ASC`,
+          `SELECT * FROM wishlist_items WHERE user_id = ? AND status = 'pending' ORDER BY CASE priority WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END, estimated_amount ASC`,
           [userId]
         );
 
